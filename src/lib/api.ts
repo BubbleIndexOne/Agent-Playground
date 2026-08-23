@@ -86,7 +86,6 @@ export async function callModel(
   const result = await generateText({
     model,
     messages,
-    maxOutputTokens: 1024,
   });
 
   return {
