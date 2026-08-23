@@ -1,5 +1,9 @@
+import { generateText, type CoreMessage } from 'ai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import mockData from './mockdata.json';
-import { STORAGE_KEYS, ANTHROPIC_API_URL, ANTHROPIC_VERSION, OPENAI_API_URL, GOOGLE_API_BASE_URL } from './constants';
+import { STORAGE_KEYS } from './constants';
 
 export interface Model {
   id: string;
@@ -12,12 +16,11 @@ export interface Provider {
   models: Model[];
 }
 
-// Fetch providers and models from mock data
 export const getProviders = (): Provider[] => {
   return mockData.providers;
 };
 
-// sessionStorage helpers
+// sessionStorage helpers — unchanged, this part was already fine
 export const saveKey = (key: string) => {
   if (typeof window !== 'undefined') {
     sessionStorage.setItem(STORAGE_KEYS.MODEL_API_KEY, key);
@@ -37,100 +40,60 @@ export const clearKey = () => {
   }
 };
 
-// Request logic
-export async function callModel(apiKey: string, providerId: string, modelId: string, messages: any[]) {
-  if (providerId === 'anthropic') {
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: modelId,
-        max_tokens: 1024,
-        messages
-      })
+// --- This is the part that replaces every future if/else branch ---
+// Each entry just configures a provider factory. Adding provider #4
+// means adding one line here, not a new request/response translation.
+const providerFactories: Record<string, (apiKey: string) => (modelId: string) => any> = {
+  anthropic: (apiKey) => {
+    const anthropic = createAnthropic({
+      apiKey,
+      // Required for BYOK client-side calls — see prior discussion on
+      // why this header is intentionally named "dangerous": it's fine
+      // here because the key belongs to the user, not to us.
+      headers: { 'anthropic-dangerous-direct-browser-access': 'true' },
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      ...data,
-      usage: {
-        input: data.usage?.input_tokens || 0,
-        output: data.usage?.output_tokens || 0,
-        total: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0)
-      }
-    };
-  } else if (providerId === 'openai') {
-    const response = await fetch(OPENAI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: modelId,
-        max_tokens: 1024,
-        messages
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      content: [{ text: data.choices?.[0]?.message?.content || '' }],
-      usage: {
-        input: data.usage?.prompt_tokens || 0,
-        output: data.usage?.completion_tokens || 0,
-        total: data.usage?.total_tokens || 0
-      }
-    };
-  } else if (providerId === 'google') {
-    // Map standard messages [{role: 'user', content: '...'}] to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    return (modelId: string) => anthropic(modelId);
+  },
+  openai: (apiKey) => {
+    const openai = createOpenAI({ apiKey });
+    return (modelId: string) => openai(modelId);
+  },
+  google: (apiKey) => {
+    const google = createGoogleGenerativeAI({ apiKey });
+    return (modelId: string) => google(modelId);
+  },
+};
 
-    const response = await fetch(`${GOOGLE_API_BASE_URL}/${modelId}:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const promptTokens = data.usageMetadata?.promptTokenCount || 0;
-    const outputTokens = data.usageMetadata?.candidatesTokenCount || 0;
-    return {
-      content: [{ text: data.candidates?.[0]?.content?.parts?.[0]?.text || '' }],
-      usage: {
-        input: promptTokens,
-        output: outputTokens,
-        total: data.usageMetadata?.totalTokenCount || (promptTokens + outputTokens)
-      }
-    };
-  } else {
+export interface CallResult {
+  text: string;
+  usage: { input: number; output: number; total: number };
+}
+
+// One function, any provider. This fully replaces the old if/else callModel.
+export async function callModel(
+  apiKey: string,
+  providerId: string,
+  modelId: string,
+  messages: CoreMessage[]
+): Promise<CallResult> {
+  const factory = providerFactories[providerId];
+  if (!factory) {
     throw new Error(`Integration for provider '${providerId}' is not implemented yet.`);
   }
+
+  const model = factory(apiKey)(modelId);
+
+  const result = await generateText({
+    model,
+    messages,
+  });
+
+  return {
+    text: result.text,
+    usage: {
+      input: result.usage.inputTokens ?? 0,
+      output: result.usage.outputTokens ?? 0,
+      total: result.usage.totalTokens ?? 0,
+    },
+  };
 }
