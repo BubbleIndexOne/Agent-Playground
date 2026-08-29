@@ -16,6 +16,18 @@ export interface Provider {
   models: Model[];
 }
 
+export interface ModelConfig {
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  maxOutputTokens?: number;
+  reasoning?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'provider-default' | string;
+  toolChoice?: 'auto' | 'required' | 'none' | string;
+  [key: string]: any; // Allow other configs
+}
+
 export const getProviders = (): Provider[] => {
   return mockData.providers;
 };
@@ -38,6 +50,26 @@ export const clearKey = () => {
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem(STORAGE_KEYS.MODEL_API_KEY);
   }
+};
+
+export const saveModelConfigs = (configs: ModelConfig) => {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(STORAGE_KEYS.MODEL_CONFIGS, JSON.stringify(configs));
+  }
+};
+
+export const getModelConfigs = (): ModelConfig | null => {
+  if (typeof window !== 'undefined') {
+    const data = sessionStorage.getItem(STORAGE_KEYS.MODEL_CONFIGS);
+    if (data) {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+  return null;
 };
 
 // --- This is the part that replaces every future if/else branch ---
@@ -74,7 +106,8 @@ export async function callModel(
   apiKey: string,
   providerId: string,
   modelId: string,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  config: ModelConfig = {}
 ): Promise<CallResult> {
   const factory = providerFactories[providerId];
   if (!factory) {
@@ -83,10 +116,22 @@ export async function callModel(
 
   const model = factory(apiKey)(modelId);
 
-  const result = await generateText({
+  const generateOptions: any = {
     model,
     messages,
-  });
+  };
+
+  if (config.temperature !== undefined) generateOptions.temperature = config.temperature;
+  if (config.topP !== undefined) generateOptions.topP = config.topP;
+  if (config.topK !== undefined) generateOptions.topK = config.topK;
+  if (config.presencePenalty !== undefined) generateOptions.presencePenalty = config.presencePenalty;
+  if (config.frequencyPenalty !== undefined) generateOptions.frequencyPenalty = config.frequencyPenalty;
+  if (config.maxOutputTokens !== undefined) generateOptions.maxTokens = config.maxOutputTokens; // maxTokens is the prop in generateText
+
+  // reasoning and toolChoice might require specific structure depending on AI SDK version, passing them if present
+  // Note: some configs might be unsupported by generateText directly or need different keys.
+
+  const result = await generateText(generateOptions);
 
   return {
     text: result.text,

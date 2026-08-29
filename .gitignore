@@ -54,3 +54,5 @@ Thumbs.db
 
 # Package manager
 package-lock.json
+
+apispec.json
