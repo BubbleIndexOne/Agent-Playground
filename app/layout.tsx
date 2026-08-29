@@ -7,9 +7,8 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
 
 export const metadata: Metadata = {
-  title: 'Console — Developer workspace',
-  description: 'A calm, approachable workspace for building with developer tools and AI.',
-  generator: 'v0.app',
+  title: 'Agent Playground — Developer workspace',
+  description: 'A calm, approachable workspace for experimenting with LLMs and prompt engineering.',
 }
 
 export const viewport: Viewport = {
