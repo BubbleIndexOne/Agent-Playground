@@ -7,6 +7,7 @@ import {
   Wrench, X, Zap, SlidersHorizontal
 } from 'lucide-react'
 import { getProviders, getKey, saveKey, clearKey, callModel, Provider, ModelConfig, getModelConfigs, saveModelConfigs } from '@/src/lib/api'
+import { DEFAULT_MODEL_CONFIGS } from '@/src/lib/constants'
 import ReactMarkdown from 'react-markdown'
 
 const navigation = [
@@ -93,6 +94,10 @@ function AdvancedModelSettings({ providers, providerId, modelId, apiKey, configs
     setDraftConfigs(prev => ({ ...prev, [key]: value }))
   }
 
+  const resetConfigs = () => {
+    setDraftConfigs({})
+  }
+
   return <div className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="model-settings-title" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
     <div className="w-full max-w-[400px] h-full bg-card border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
       <div className="flex items-center justify-between p-6 border-b border-border">
@@ -124,37 +129,85 @@ function AdvancedModelSettings({ providers, providerId, modelId, apiKey, configs
           </>
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Temperature <span className="text-muted-foreground">{draftConfigs.temperature ?? 0.7}</span></label>
-              <input type="range" min="0" max="2" step="0.1" value={draftConfigs.temperature ?? 0.7} onChange={e => updateConfig('temperature', parseFloat(e.target.value))} className="accent-primary" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Top P <span className="text-muted-foreground">{draftConfigs.topP ?? 1}</span></label>
-              <input type="range" min="0" max="1" step="0.05" value={draftConfigs.topP ?? 1} onChange={e => updateConfig('topP', parseFloat(e.target.value))} className="accent-primary" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Top K</label>
-              <input type="number" min="0" value={draftConfigs.topK ?? ''} onChange={e => updateConfig('topK', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="e.g. 40" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Max Output Tokens</label>
-              <input type="number" min="1" value={draftConfigs.maxOutputTokens ?? ''} onChange={e => updateConfig('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="e.g. 4096" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Presence Penalty <span className="text-muted-foreground">{draftConfigs.presencePenalty ?? 0}</span></label>
-              <input type="range" min="-2" max="2" step="0.1" value={draftConfigs.presencePenalty ?? 0} onChange={e => updateConfig('presencePenalty', parseFloat(e.target.value))} className="accent-primary" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium flex justify-between">Frequency Penalty <span className="text-muted-foreground">{draftConfigs.frequencyPenalty ?? 0}</span></label>
-              <input type="range" min="-2" max="2" step="0.1" value={draftConfigs.frequencyPenalty ?? 0} onChange={e => updateConfig('frequencyPenalty', parseFloat(e.target.value))} className="accent-primary" />
+            <div className="flex flex-col gap-6">
+              <div>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Creativity</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Temperature <span className="text-muted-foreground">{draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature}</span></label>
+                    <input type="range" min="0" max="2" step="0.1" value={draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature} onChange={e => updateConfig('temperature', parseFloat(e.target.value))} className="accent-primary" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Stop Sequences</label>
+                    <input type="text" value={draftConfigs.stopSequences?.join(', ') ?? ''} onChange={e => { const vals = e.target.value.split(',').map(s => s.trim()).filter(Boolean); updateConfig('stopSequences', vals.length > 0 ? vals : undefined) }} placeholder="e.g. stop, 🛑" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Length</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Max Output Tokens</label>
+                    <input type="number" min="1" value={draftConfigs.maxOutputTokens ?? ''} onChange={e => updateConfig('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="Provider default" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sampling</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Top P <span className="text-muted-foreground">{draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP}</span></label>
+                    <input type="range" min="0" max="1" step="0.05" value={draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP} onChange={e => updateConfig('topP', parseFloat(e.target.value))} className="accent-primary" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Top K <span className="text-muted-foreground">{draftConfigs.topK ?? 'Provider default'}</span></label>
+                    <input type="range" min="2" max="100" step="1" value={draftConfigs.topK ?? DEFAULT_MODEL_CONFIGS.topK} onChange={e => updateConfig('topK', parseInt(e.target.value))} className="accent-primary" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Penalties</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Presence Penalty <span className="text-muted-foreground">{draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty}</span></label>
+                    <input type="range" min="-2" max="2" step="0.1" value={draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty} onChange={e => updateConfig('presencePenalty', parseFloat(e.target.value))} className="accent-primary" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Frequency Penalty <span className="text-muted-foreground">{draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty}</span></label>
+                    <input type="range" min="-2" max="2" step="0.1" value={draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty} onChange={e => updateConfig('frequencyPenalty', parseFloat(e.target.value))} className="accent-primary" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Determinism</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[12px] font-medium flex justify-between">Seed</label>
+                    <input type="number" min="0" value={draftConfigs.seed ?? ''} onChange={e => updateConfig('seed', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="Provider default" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         )}
       </div>
 
       <div className="p-6 border-t border-border flex items-center justify-between bg-card mt-auto">
-        <button onClick={clear} className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive">Clear key</button>
-        <button onClick={save} className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Save & Apply</button>
+        {activeTab === 'config' ? (
+          <>
+            <button onClick={resetConfigs} className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive">Reset to defaults</button>
+            <button onClick={save} className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Save Config</button>
+          </>
+        ) : (
+          <>
+            <button onClick={clear} className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive">Clear key</button>
+            <button onClick={save} className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Save & Apply</button>
+          </>
+        )}
       </div>
     </div>
   </div>

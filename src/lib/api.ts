@@ -3,7 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import mockData from './mockdata.json';
-import { STORAGE_KEYS } from './constants';
+import { STORAGE_KEYS, REASONING_LEVELS, TOOL_CHOICES } from './constants';
 
 export interface Model {
   id: string;
@@ -23,8 +23,10 @@ export interface ModelConfig {
   presencePenalty?: number;
   frequencyPenalty?: number;
   maxOutputTokens?: number;
-  reasoning?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'provider-default' | string;
-  toolChoice?: 'auto' | 'required' | 'none' | string;
+  seed?: number;
+  stopSequences?: string[];
+  reasoning?: typeof REASONING_LEVELS[number] | string;
+  toolChoice?: typeof TOOL_CHOICES[number] | string;
   [key: string]: any; // Allow other configs
 }
 
@@ -127,6 +129,8 @@ export async function callModel(
   if (config.presencePenalty !== undefined) generateOptions.presencePenalty = config.presencePenalty;
   if (config.frequencyPenalty !== undefined) generateOptions.frequencyPenalty = config.frequencyPenalty;
   if (config.maxOutputTokens !== undefined) generateOptions.maxTokens = config.maxOutputTokens; // maxTokens is the prop in generateText
+  if (config.seed !== undefined) generateOptions.seed = config.seed;
+  if (config.stopSequences && config.stopSequences.length > 0) generateOptions.stopSequences = config.stopSequences;
 
   // reasoning and toolChoice might require specific structure depending on AI SDK version, passing them if present
   // Note: some configs might be unsupported by generateText directly or need different keys.
