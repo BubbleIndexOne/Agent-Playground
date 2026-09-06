@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react'
 import {
   MoreVertical,
   Edit3,
@@ -9,6 +8,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { Tool } from './types'
+import { useToolCardMenu } from './hooks/useToolCardMenu'
 
 interface ToolCardProps {
   tool: Tool
@@ -25,23 +25,7 @@ export function ToolCard({
   onDelete,
   onTogglePublish,
 }: ToolCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    if (menuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [menuOpen])
+  const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
 
   return (
     <div
