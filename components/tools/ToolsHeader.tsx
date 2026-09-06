@@ -1,24 +1,6 @@
 import { Plus, Search, X } from 'lucide-react'
-import { ToolFilter } from './types'
-
-interface ToolsHeaderProps {
-  activeTab: 'my-tools' | 'marketplace'
-  onTabChange: (tab: 'my-tools' | 'marketplace') => void
-  searchQuery: string
-  onSearchChange: (query: string) => void
-  activeFilter: ToolFilter
-  onFilterChange: (filter: ToolFilter) => void
-  onNewTool: () => void
-  toolCount: number
-}
-
-const FILTER_OPTIONS: { id: ToolFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'client', label: 'Client Tools' },
-  { id: 'mcp', label: 'Connected' },
-  { id: 'published', label: 'Published' },
-  { id: 'draft', label: 'Drafts' },
-]
+import { ToolFilter, ToolsHeaderProps } from './types'
+import { FILTER_OPTIONS } from './constants'
 
 export function ToolsHeader({
   activeTab,

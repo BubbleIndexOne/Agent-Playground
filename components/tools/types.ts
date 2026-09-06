@@ -35,3 +35,14 @@ export interface Tool {
 
 export type CreationStep = 'none' | 'choose' | 'client' | 'service'
 export type ToolFilter = 'all' | 'client' | 'mcp' | 'published' | 'draft'
+
+export interface ToolsHeaderProps {
+  activeTab: 'my-tools' | 'marketplace'
+  onTabChange: (tab: 'my-tools' | 'marketplace') => void
+  searchQuery: string
+  onSearchChange: (query: string) => void
+  activeFilter: ToolFilter
+  onFilterChange: (filter: ToolFilter) => void
+  onNewTool: () => void
+  toolCount: number
+}

@@ -1,15 +1,9 @@
 import { Plus, Trash2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { ToolParameter, ParameterType } from '../types'
 
-interface ToolParametersBuilderProps {
-  parameters: ToolParameter[]
-  onAddParam: (newParam: ToolParameter) => void
-  onUpdateParam: (id: string, oldName: string, updatedParam: ToolParameter) => void
-  onRemoveParam: (id: string, name: string) => void
-  parseStatus?: 'idle' | 'parsing' | 'error' | 'success'
-}
-
-const PARAM_TYPES: ParameterType[] = ['string', 'number', 'boolean', 'object', 'array']
+import { ToolParametersBuilderProps } from './types'
+import { PARAM_TYPES } from './constants'
+import { useToolParameters } from './hooks/useToolParameters'
 
 export function ToolParametersBuilder({
   parameters,
@@ -18,23 +12,7 @@ export function ToolParametersBuilder({
   onRemoveParam,
   parseStatus = 'idle'
 }: ToolParametersBuilderProps) {
-  const handleAdd = () => {
-    const newParam: ToolParameter = {
-      id: Math.random().toString(36).substring(2, 9),
-      name: `new_param_${parameters.length + 1}`,
-      type: 'string',
-      description: 'Description...',
-      required: true,
-    }
-    onAddParam(newParam)
-  }
-
-  const handleUpdate = (param: ToolParameter, updates: Partial<ToolParameter>) => {
-    const updated = { ...param, ...updates }
-    // Enforce valid name
-    updated.name = updated.name.replace(/[^a-zA-Z0-9_]/g, '')
-    onUpdateParam(param.id, param.name, updated)
-  }
+  const { handleAdd, handleUpdate } = useToolParameters({ parameters, onAddParam, onUpdateParam })
 
   return (
     <div className="flex flex-col gap-4">
