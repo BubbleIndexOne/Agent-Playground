@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Check,
   RotateCcw,
+  GripVertical,
 } from 'lucide-react'
 import { Tool, ToolParameter, ToolCapabilities } from '../types'
 import { ToolParametersBuilder } from './ToolParametersBuilder'
@@ -58,6 +59,42 @@ export function ClientToolEditor({ initialTool, onCancel, onSave }: ClientToolEd
   
   const [parseStatus, setParseStatus] = useState<'idle' | 'parsing' | 'error' | 'success'>('idle')
   const isEditingFromUI = useRef(false)
+
+  // Resizable split panel state (default 55% left code panel)
+  const [leftWidthPercent, setLeftWidthPercent] = useState(55)
+  const [isResizing, setIsResizing] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const newLeftWidth = ((e.clientX - rect.left) / rect.width) * 100
+      // Clamp between 25% and 75%
+      const clamped = Math.min(Math.max(newLeftWidth, 25), 75)
+      setLeftWidthPercent(clamped)
+    }
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+    }
+
+    if (isResizing) {
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
 
   const toggleCapability = (key: keyof ToolCapabilities) => {
     setCapabilities(prev => ({ ...prev, [key]: !prev[key] }))
@@ -195,10 +232,17 @@ export function ClientToolEditor({ initialTool, onCancel, onSave }: ClientToolEd
         </div>
       )}
 
-      {/* Main Grid */}
-      <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        {/* Left Column */}
-        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden">
+      {/* Main Resizable Split Panels */}
+      <div
+        ref={containerRef}
+        className="flex flex-col lg:flex-row min-h-0 flex-1 relative select-none gap-0 items-stretch"
+        style={{ userSelect: isResizing ? 'none' : 'auto' }}
+      >
+        {/* Left Column (Code & Docs) */}
+        <div
+          style={{ width: `${leftWidthPercent}%` }}
+          className="flex flex-col rounded-xl border border-border bg-card overflow-hidden transition-[width] duration-75 min-w-[280px] shadow-sm"
+        >
           {/* Tool Name Input & Code Sync Bar */}
           <div className="flex items-center justify-between border-b border-border bg-background/50 px-4 py-2.5">
             <div className="flex flex-1 items-center gap-2 mr-3">
@@ -287,8 +331,31 @@ export function ClientToolEditor({ initialTool, onCancel, onSave }: ClientToolEd
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden">
+        {/* Resizer Handle with margin spacer */}
+        <div
+          onMouseDown={e => {
+            e.preventDefault()
+            setIsResizing(true)
+          }}
+          className="group relative hidden lg:flex items-center justify-center w-5 mx-1 cursor-col-resize z-20 select-none"
+          title="Drag to resize panels"
+        >
+          <div
+            className={`h-full w-[2px] transition-colors rounded-full ${
+              isResizing ? 'bg-primary' : 'bg-border/60 group-hover:bg-primary/50'
+            }`}
+          />
+          <div
+            className={`absolute flex size-5 items-center justify-center rounded-full border border-border bg-card shadow-md transition-all ${
+              isResizing ? 'scale-110 border-primary text-primary bg-accent' : 'opacity-60 group-hover:opacity-100 text-muted-foreground group-hover:scale-105'
+            }`}
+          >
+            <GripVertical className="size-3" />
+          </div>
+        </div>
+
+        {/* Right Column (Parameters / Sandbox / Permissions) */}
+        <div className="flex flex-col flex-1 rounded-xl border border-border bg-card overflow-hidden min-w-[280px] shadow-sm">
           {/* Tab Navigation */}
           <div className="flex border-b border-border bg-background/50 px-4 text-[12px] font-medium">
             <button

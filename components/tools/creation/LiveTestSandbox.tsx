@@ -1,5 +1,14 @@
-import { useState, useEffect } from 'react'
-import { Play, Activity, CheckCircle2, AlertCircle, Clock, RotateCcw, Terminal } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import {
+  Play,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  RotateCcw,
+  Terminal,
+  GripHorizontal,
+} from 'lucide-react'
 import { ToolParameter, ToolCapabilities } from '../types'
 
 interface LiveTestSandboxProps {
@@ -18,27 +27,64 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
   const [logs, setLogs] = useState<string[]>([])
   const [hasRun, setHasRun] = useState(false)
 
-  // Generate sensible default JSON mock values based on parameters
+  // Vertical resizable split between Input Arguments and Execution Console (default 38% top)
+  const [inputHeightPercent, setInputHeightPercent] = useState(38)
+  const [isResizingVertical, setIsResizingVertical] = useState(false)
+  const sandboxContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingVertical || !sandboxContainerRef.current) return
+      const rect = sandboxContainerRef.current.getBoundingClientRect()
+      const newHeightPercent = ((e.clientY - rect.top) / rect.height) * 100
+      // Clamp between 20% and 75%
+      const clamped = Math.min(Math.max(newHeightPercent, 20), 75)
+      setInputHeightPercent(clamped)
+    }
+
+    const handleMouseUp = () => {
+      if (isResizingVertical) {
+        setIsResizingVertical(false)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+    }
+
+    if (isResizingVertical) {
+      document.body.style.cursor = 'row-resize'
+      document.body.style.userSelect = 'none'
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizingVertical])
+
+  // Generate sensible default JSON mock values based strictly on parsed parameter types
   const generateDefaultArgs = () => {
     const defaultObj: Record<string, any> = {}
     parameters.forEach(p => {
-      if (p.name.trim()) {
+      const cleanName = p.name.trim()
+      if (cleanName) {
         switch (p.type) {
           case 'number':
-            defaultObj[p.name] = 42
+            defaultObj[cleanName] = 10
             break
           case 'boolean':
-            defaultObj[p.name] = true
+            defaultObj[cleanName] = true
             break
           case 'object':
-            defaultObj[p.name] = { sampleKey: 'sampleValue' }
+            defaultObj[cleanName] = { key: `test_${cleanName}_val` }
             break
           case 'array':
-            defaultObj[p.name] = ['item1', 'item2']
+            defaultObj[cleanName] = [`test_${cleanName}_1`, `test_${cleanName}_2`]
             break
           case 'string':
           default:
-            defaultObj[p.name] = p.defaultValue || (p.name.toLowerCase().includes('location') ? 'London' : `test_${p.name}`)
+            defaultObj[cleanName] = `test_${cleanName}`
             break
         }
       }
@@ -53,6 +99,15 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
 
   const handleResetInputs = () => {
     setInputArgsJson(generateDefaultArgs())
+  }
+
+  const handleFormatJson = () => {
+    try {
+      const parsed = JSON.parse(inputArgsJson)
+      setInputArgsJson(JSON.stringify(parsed, null, 2))
+    } catch {
+      // ignore invalid json format attempt
+    }
   }
 
   const handleRun = async () => {
@@ -189,8 +244,9 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-4 h-full min-h-0">
+      {/* Header Bar */}
+      <div className="flex items-center justify-between shrink-0">
         <div>
           <div className="flex items-center gap-2">
             <h4 className="text-[13px] font-semibold text-foreground">Live Sandbox Runner</h4>
@@ -200,26 +256,26 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
               </span>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Execute this tool client-side with mock inputs and capability sandboxing.
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Test tool execution with live sandboxed permissions and typed mock parameters.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleResetInputs}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title="Reset to default mock parameters"
+            className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors border border-border/60 bg-background/50"
+            title="Reset arguments using parsed JSDoc parameter names & types"
           >
             <RotateCcw className="size-3" />
-            Reset
+            Reset Inputs
           </button>
           <button
             type="button"
             id="run-sandbox-test-btn"
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-[12px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90 disabled:opacity-50 shadow-sm"
           >
             {isRunning ? <Activity className="size-3.5 animate-spin" /> : <Play className="size-3.5 fill-current" />}
             Run Test
@@ -227,27 +283,87 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-[240px]">
-        {/* Input parameters editor */}
-        <div className="flex flex-col rounded-lg border border-border bg-background/60 p-3">
-          <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-            <span>Input Arguments (JSON)</span>
-            <span className="font-mono text-[10px] text-primary select-none">args</span>
+      {/* Main Sandbox Workspace with vertical resizer */}
+      <div
+        ref={sandboxContainerRef}
+        className="flex flex-col flex-1 min-h-0 relative select-none"
+        style={{ userSelect: isResizingVertical ? 'none' : 'auto' }}
+      >
+        {/* Input Parameters Box */}
+        <div
+          style={{ height: `${inputHeightPercent}%` }}
+          className="flex flex-col rounded-xl border border-border bg-background/40 overflow-hidden shrink-0 min-h-[100px] shadow-sm transition-[height] duration-75"
+        >
+          <div className="flex items-center justify-between border-b border-border/80 bg-muted/30 px-3.5 py-2 text-[11px] font-medium shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">Input Arguments</span>
+              <span className="rounded bg-primary/10 px-1.5 py-0.2 font-mono text-[10px] text-primary">
+                args
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFormatJson}
+              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              title="Prettify JSON"
+            >
+              Prettify JSON
+            </button>
           </div>
           <textarea
             id="sandbox-input-json"
             value={inputArgsJson}
             onChange={e => setInputArgsJson(e.target.value)}
             spellCheck={false}
-            className="flex-1 w-full resize-none rounded border border-border/70 bg-card p-2.5 font-mono text-[11px] text-foreground outline-none focus:border-primary/50"
+            className="flex-1 w-full resize-none bg-background/50 p-3 font-mono text-[11px] leading-relaxed text-foreground outline-none focus:ring-0 overflow-y-auto"
             placeholder="{\n  &quot;param&quot;: &quot;value&quot;\n}"
           />
         </div>
 
-        {/* Execution Output console */}
-        <div className="flex flex-col rounded-lg border border-border bg-background/60 p-3 overflow-hidden">
-          <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-            <span>Execution Output</span>
+        {/* Vertical Resizer Handle */}
+        <div
+          onMouseDown={e => {
+            e.preventDefault()
+            setIsResizingVertical(true)
+          }}
+          className="group relative flex items-center justify-center h-4 my-0.5 cursor-row-resize z-20 select-none shrink-0"
+          title="Drag to resize console panels"
+        >
+          <div
+            className={`w-full h-[2px] transition-colors rounded-full ${
+              isResizingVertical ? 'bg-primary' : 'bg-border/60 group-hover:bg-primary/50'
+            }`}
+          />
+          <div
+            className={`absolute flex size-5 items-center justify-center rounded-full border border-border bg-card shadow-md transition-all ${
+              isResizingVertical
+                ? 'scale-110 border-primary text-primary bg-accent'
+                : 'opacity-60 group-hover:opacity-100 text-muted-foreground group-hover:scale-105'
+            }`}
+          >
+            <GripHorizontal className="size-3" />
+          </div>
+        </div>
+
+        {/* Execution Output Console Box */}
+        <div className="flex flex-col rounded-xl border border-border bg-background/40 overflow-hidden flex-1 min-h-[120px] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/80 bg-muted/30 px-3.5 py-2 text-[11px] font-medium shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">Execution Console</span>
+              {result !== null && !error && (
+                <span className="flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="size-3" />
+                  Success
+                </span>
+              )}
+              {error && (
+                <span className="flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive border border-destructive/20">
+                  <AlertCircle className="size-3" />
+                  Error
+                </span>
+              )}
+            </div>
+
             {latency !== null && (
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
                 <Clock className="size-3 text-primary" />
@@ -256,51 +372,56 @@ export function LiveTestSandbox({ code, parameters, capabilities, toolName }: Li
             )}
           </div>
 
-          <div id="sandbox-output-console" className="flex-1 overflow-auto rounded border border-border/70 bg-card p-3 font-mono text-[11px]">
+          <div
+            id="sandbox-output-console"
+            className="flex-1 overflow-auto bg-background/70 p-3.5 font-mono text-[11px]"
+          >
             {isRunning ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Activity className="size-4 animate-spin text-primary" />
-                <span className="text-[11px]">Executing tool function...</span>
+              <div className="flex h-full flex-col items-center justify-center gap-2.5 text-muted-foreground">
+                <Activity className="size-5 animate-spin text-primary" />
+                <span className="text-[12px] font-medium">Executing tool sandbox...</span>
               </div>
             ) : error ? (
-              <div className="flex items-start gap-2 text-destructive">
+              <div className="flex items-start gap-2.5 text-destructive rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                 <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">Execution Error:</span>
-                  <span className="whitespace-pre-wrap mt-1 leading-relaxed">{error}</span>
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-[11px]">Execution Error:</span>
+                  <span className="whitespace-pre-wrap leading-relaxed text-[11px]">{error}</span>
                 </div>
               </div>
             ) : result !== null ? (
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-semibold">
-                    <CheckCircle2 className="size-3.5" />
-                    <span>SUCCESS (200 OK)</span>
-                  </div>
-                </div>
-
+              <div className="flex flex-col gap-3">
                 {logs.length > 0 && (
-                  <div className="rounded bg-background/80 p-2 border border-border/60 text-[10px] text-muted-foreground flex flex-col gap-1">
-                    <span className="flex items-center gap-1 font-semibold text-foreground text-[9px] uppercase tracking-wider">
-                      <Terminal className="size-2.5" /> Console Logs
+                  <div className="rounded-lg bg-card/80 p-2.5 border border-border/70 text-[10px] text-muted-foreground flex flex-col gap-1.5">
+                    <span className="flex items-center gap-1.5 font-semibold text-foreground text-[9px] uppercase tracking-wider">
+                      <Terminal className="size-3 text-primary" /> Captured Console Logs
                     </span>
-                    {logs.map((l, i) => (
-                      <span key={i} className="font-mono">
-                        {l}
-                      </span>
-                    ))}
+                    <div className="flex flex-col gap-0.5 divide-y divide-border/30">
+                      {logs.map((l, i) => (
+                        <span key={i} className="font-mono pt-1">
+                          {l}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
-                <pre className="text-foreground whitespace-pre-wrap leading-relaxed">
-                  {typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)}
-                </pre>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Returned Value
+                  </span>
+                  <pre className="text-foreground whitespace-pre-wrap leading-relaxed rounded-lg bg-card/50 p-2.5 border border-border/50 overflow-x-auto">
+                    {typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)}
+                  </pre>
+                </div>
               </div>
             ) : hasRun ? (
               <span className="text-muted-foreground">Execution completed with undefined return.</span>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground/70">
-                <p>Click &quot;Run Test&quot; to execute &quot;{toolName || 'Tool'}&quot;</p>
+              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground/60 py-6">
+                <Terminal className="size-6 text-muted-foreground/40 mb-2" />
+                <p className="text-[12px] font-medium">Console Ready</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Click &quot;Run Test&quot; above to execute &quot;{toolName || 'Tool'}&quot;</p>
               </div>
             )}
           </div>
