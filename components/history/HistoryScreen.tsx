@@ -2,24 +2,20 @@
  * @fileoverview History Workspace Screen Component
  *
  * Provides inspection and auditing of previous prompt executions, token usage,
- * execution latencies, and responses.
+ * execution latencies, and responses. Reads live session history from persistent storage.
  */
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Clock3,
   Search,
-  Zap,
-  RotateCcw,
-  Sparkles,
-  ArrowUpRight,
   PanelLeft,
   Trash2,
 } from 'lucide-react'
 
-interface HistoryEntry {
+export interface HistoryEntry {
   id: string
   prompt: string
   response: string
@@ -29,39 +25,39 @@ interface HistoryEntry {
   timestamp: string
 }
 
-const SAMPLE_HISTORY: HistoryEntry[] = [
-  {
-    id: 'run-1',
-    prompt: 'Summarize the following text in bulleted style:\n\nCloudflare Workers provide serverless execution...',
-    response: '• Fast edge execution across 300+ global data centers.\n• Zero cold starts using V8 isolates.\n• Built-in asset serving.',
-    model: 'Claude 3.5 Sonnet',
-    tokens: 342,
-    latencyMs: 780,
-    timestamp: '5m ago',
-  },
-  {
-    id: 'run-2',
-    prompt: 'Generate an API schema for user onboarding webhook...',
-    response: '{\n  "event": "user.created",\n  "timestamp": "2026-09-13T07:15:00Z",\n  "userId": "usr_99182"\n}',
-    model: 'GPT-4o',
-    tokens: 490,
-    latencyMs: 1120,
-    timestamp: '28m ago',
-  },
-  {
-    id: 'run-3',
-    prompt: 'Explain the difference between Nucleus Sampling and Top-K...',
-    response: 'Top-K restricts candidate tokens to the K highest probabilities, while Nucleus (Top-P) dynamically selects tokens whose cumulative probability reaches P.',
-    model: 'Gemini 3.7 Flash',
-    tokens: 215,
-    latencyMs: 540,
-    timestamp: '1h ago',
-  },
-]
+export const HISTORY_STORAGE_KEY = 'workspace_history'
 
 export function HistoryScreen() {
-  const [history, setHistory] = useState<HistoryEntry[]>(SAMPLE_HISTORY)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Load live execution history from storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(HISTORY_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            setHistory(parsed)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to read workspace execution history from localStorage:', err)
+      }
+    }
+  }, [])
+
+  const handleClearHistory = () => {
+    setHistory([])
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(HISTORY_STORAGE_KEY)
+      } catch (err) {
+        console.error('Failed to clear workspace execution history:', err)
+      }
+    }
+  }
 
   const filteredHistory = history.filter(item => {
     if (searchQuery.trim()) {
@@ -99,7 +95,7 @@ export function HistoryScreen() {
           {history.length > 0 && (
             <button
               type="button"
-              onClick={() => setHistory([])}
+              onClick={handleClearHistory}
               className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
             >
               <Trash2 className="size-3.5" />
@@ -107,6 +103,19 @@ export function HistoryScreen() {
             </button>
           )}
         </div>
+
+        {history.length > 0 && (
+          <div className="relative max-w-sm pt-1">
+            <Search className="pointer-events-none absolute left-3 top-3.5 size-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Filter history..."
+              className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-8 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            />
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto min-h-0">
           {filteredHistory.length > 0 ? (
@@ -139,6 +148,20 @@ export function HistoryScreen() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : searchQuery ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-xl bg-background/40">
+              <p className="text-[14px] font-medium text-foreground">No matching history entries</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                We couldn&apos;t find any past runs matching &quot;{searchQuery}&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-3 text-[12px] font-medium text-primary hover:underline"
+              >
+                Clear search
+              </button>
             </div>
           ) : (
             <div className="py-24 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-xl bg-background/40">

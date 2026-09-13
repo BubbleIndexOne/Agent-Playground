@@ -747,13 +747,31 @@ export function PlaygroundScreen() {
     const start = Date.now()
     try {
       const res = await callModel(apiKey, providerId, modelId, [{ role: 'user', content: finalPrompt }], configs)
-      if (res.text) {
-        setResponseOutput(res.text)
-      } else {
-        setResponseOutput(JSON.stringify(res, null, 2))
-      }
+      const outputText = res.text || JSON.stringify(res, null, 2)
+      setResponseOutput(outputText)
+      const totalTokens = res.usage ? res.usage.total : 0
       if (res.usage) {
-        setTokens(res.usage.total)
+        setTokens(totalTokens)
+      }
+
+      // Record to persistent execution history
+      if (typeof window !== 'undefined') {
+        try {
+          const currentHistory = JSON.parse(localStorage.getItem('workspace_history') || '[]')
+          const activeModelName = providers.find(p => p.id === providerId)?.models.find(m => m.id === modelId)?.name || modelId
+          const newEntry = {
+            id: 'run-' + Date.now(),
+            prompt: finalPrompt,
+            response: outputText,
+            model: activeModelName,
+            tokens: totalTokens,
+            latencyMs: Date.now() - start,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }
+          localStorage.setItem('workspace_history', JSON.stringify([newEntry, ...currentHistory].slice(0, 50)))
+        } catch (err) {
+          console.error('Failed to append to workspace execution history:', err)
+        }
       }
     } catch (e: any) {
       setErrorMsg(e.message || 'An unknown error occurred')
@@ -765,6 +783,7 @@ export function PlaygroundScreen() {
 
   const currentProvider = providers.find(p => p.id === providerId)
   const currentModelName = currentProvider?.models.find(m => m.id === modelId)?.name || modelId
+
 
   return (
     <main

@@ -7,21 +7,16 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Bot,
   Plus,
   Search,
-  Sparkles,
-  Play,
-  MoreVertical,
-  Activity,
-  Layers,
-  ArrowRight,
   PanelLeft,
+  Layers,
 } from 'lucide-react'
 
-interface AgentItem {
+export interface AgentItem {
   id: string
   name: string
   description: string
@@ -31,40 +26,29 @@ interface AgentItem {
   lastRun: string
 }
 
-const SAMPLE_AGENTS: AgentItem[] = [
-  {
-    id: 'agent-1',
-    name: 'Research & Synthesis Agent',
-    description: 'Scrapes live web sources, aggregates multi-perspective insights, and compiles markdown briefings.',
-    status: 'active',
-    model: 'Claude 3.5 Sonnet',
-    toolsCount: 3,
-    lastRun: '12m ago',
-  },
-  {
-    id: 'agent-2',
-    name: 'Database Query Validator',
-    description: 'Inspects incoming SQL queries against security rules and optimizes execution plans.',
-    status: 'paused',
-    model: 'GPT-4o',
-    toolsCount: 2,
-    lastRun: '2h ago',
-  },
-  {
-    id: 'agent-3',
-    name: 'Customer Triage Assistant',
-    description: 'Evaluates user tickets, extracts sentiment, and routes urgent incidents to designated team members.',
-    status: 'draft',
-    model: 'Gemini 3.7 Flash',
-    toolsCount: 4,
-    lastRun: 'Yesterday',
-  },
-]
+const AGENTS_STORAGE_KEY = 'workspace_agents'
 
 export function AgentsScreen() {
-  const [agents] = useState<AgentItem[]>(SAMPLE_AGENTS)
+  const [agents, setAgents] = useState<AgentItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'paused' | 'draft'>('all')
+
+  // Load user agents from localStorage if available
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(AGENTS_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            setAgents(parsed)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to read workspace agents from localStorage:', err)
+      }
+    }
+  }, [])
 
   const filteredAgents = agents.filter(agent => {
     if (filter !== 'all' && agent.status !== filter) return false
@@ -142,50 +126,83 @@ export function AgentsScreen() {
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAgents.map(agent => (
-              <div
-                key={agent.id}
-                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:bg-accent/40 cursor-pointer shadow-sm"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Bot className="size-3.5" />
+          {filteredAgents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAgents.map(agent => (
+                <div
+                  key={agent.id}
+                  className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:bg-accent/40 cursor-pointer shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Bot className="size-3.5" />
+                        </div>
+                        <h3 className="text-[14px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                          {agent.name}
+                        </h3>
                       </div>
-                      <h3 className="text-[14px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                        {agent.name}
-                      </h3>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 border ${
+                          agent.status === 'active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : agent.status === 'paused'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-muted text-muted-foreground border-border'
+                        }`}
+                      >
+                        {agent.status}
+                      </span>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 border ${
-                        agent.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : agent.status === 'paused'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-muted text-muted-foreground border-border'
-                      }`}
-                    >
-                      {agent.status}
-                    </span>
+
+                    <p className="mt-3 text-[12px] text-muted-foreground line-clamp-2 leading-relaxed">
+                      {agent.description}
+                    </p>
                   </div>
 
-                  <p className="mt-3 text-[12px] text-muted-foreground line-clamp-2 leading-relaxed">
-                    {agent.description}
-                  </p>
+                  <div className="mt-5 pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1 font-mono text-[10px]">
+                      <Layers className="size-3" />
+                      {agent.toolsCount} tools
+                    </span>
+                    <span>Ran {agent.lastRun}</span>
+                  </div>
                 </div>
-
-                <div className="mt-5 pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1 font-mono text-[10px]">
-                    <Layers className="size-3" />
-                    {agent.toolsCount} tools
-                  </span>
-                  <span>Ran {agent.lastRun}</span>
-                </div>
+              ))}
+            </div>
+          ) : searchQuery ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-xl bg-background/40">
+              <p className="text-[14px] font-medium text-foreground">No matching agents found</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                We couldn&apos;t find any agents matching &quot;{searchQuery}&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-3 text-[12px] font-medium text-primary hover:underline"
+              >
+                Clear search
+              </button>
+            </div>
+          ) : (
+            <div className="py-24 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-xl bg-background/40">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-accent mb-4">
+                <Bot className="size-6 text-primary" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-[16px] font-semibold text-foreground">No agents configured</h3>
+              <p className="mt-1 text-[13px] text-muted-foreground max-w-sm">
+                Build autonomous workflows equipped with specialized tools, system prompts, and memory.
+              </p>
+              <button
+                type="button"
+                className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90"
+              >
+                <Plus className="size-3.5" />
+                Create First Agent
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
