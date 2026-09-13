@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Tool Card Presentation Component
+ *
+ * Renders an individual tool card in the workspace grid view.
+ * Displays the tool title, description, category badge (Client vs Connected),
+ * parameter count, last updated timestamp, quick action context menu (Edit, Duplicate, Delete),
+ * and a publish status toggle.
+ */
+
 import {
   MoreVertical,
   Edit3,
@@ -10,14 +19,27 @@ import {
 import { Tool } from './types'
 import { useToolCardMenu } from './hooks/useToolCardMenu'
 
-interface ToolCardProps {
+/**
+ * Props for the `ToolCard` component.
+ */
+export interface ToolCardProps {
+  /** The tool data object to render */
   tool: Tool
+  /** Callback fired when the card or edit action is clicked */
   onEdit: (tool: Tool) => void
+  /** Callback fired to clone/duplicate the tool */
   onDuplicate: (tool: Tool) => void
+  /** Callback fired to delete the tool from the workspace */
   onDelete: (id: string) => void
+  /** Optional callback to toggle the tool's published status */
   onTogglePublish?: (id: string, published: boolean) => void
 }
 
+/**
+ * Interactive card component representing a single workspace tool.
+ *
+ * @param props - ToolCardProps containing tool data and action callbacks.
+ */
 export function ToolCard({
   tool,
   onEdit,
@@ -25,6 +47,7 @@ export function ToolCard({
   onDelete,
   onTogglePublish,
 }: ToolCardProps) {
+
   const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
 
   return (

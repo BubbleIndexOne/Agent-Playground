@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Full-Featured Client Tool IDE & Code Editor
+ *
+ * Provides a split-pane development environment for authoring, configuring, and testing
+ * client-side JavaScript tools:
+ * - Left pane: Tool name, mandatory AI documentation, and code editor.
+ * - Right pane: Tabbed panel for Parameters builder, Live Sandbox, and Runtime Capabilities.
+ * - Bi-directional AST synchronization between code JSDoc comments and UI state.
+ * - Resizable horizontal split divider.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import {
   Globe,
@@ -22,13 +33,25 @@ import {
   generateFreshTemplate,
 } from '../utils/codeSync'
 
-interface ClientToolEditorProps {
+/**
+ * Props for the `ClientToolEditor` component.
+ */
+export interface ClientToolEditorProps {
+  /** Initial tool state if modifying an existing tool */
   initialTool?: Tool | null
+  /** Callback to exit editor without saving */
   onCancel: () => void
+  /** Callback to save the updated or newly created tool */
   onSave: (tool: Tool) => void
 }
 
+/**
+ * Comprehensive client-side tool editor and testbed.
+ *
+ * @param props - Component props containing initial tool data and navigation handlers.
+ */
 export function ClientToolEditor({ initialTool, onCancel, onSave }: ClientToolEditorProps) {
+
   const [name, setName] = useState(initialTool?.name || '')
   const [description, setDescription] = useState(initialTool?.description || '')
   

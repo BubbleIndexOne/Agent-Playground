@@ -1,5 +1,16 @@
+/**
+ * @fileoverview Default Tools & Filter Options
+ *
+ * Defines the initial workspace tools (including a real-world client weather tool
+ * using Open-Meteo APIs, and a sample PostgreSQL connected service) along with filter
+ * configuration options for the tools screen.
+ */
+
 import { Tool, ToolFilter } from './types'
 
+/**
+ * Filter options available in the Tools screen header for categorizing tools.
+ */
 export const FILTER_OPTIONS: { id: ToolFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'client', label: 'Client Tools' },
@@ -8,7 +19,15 @@ export const FILTER_OPTIONS: { id: ToolFilter; label: string }[] = [
   { id: 'draft', label: 'Drafts' },
 ]
 
+/**
+ * Default seeded tools available when the user first opens the Tools screen.
+ * Includes:
+ * 1. "Fetch Weather" - A complete, production-ready client JavaScript tool that queries
+ *    Open-Meteo's geocoding and forecast REST APIs with network access enabled.
+ * 2. "Read User Database" - A sample MCP-style connected database service configuration.
+ */
 export const INITIAL_TOOLS: Tool[] = [
+
   {
     id: '1',
     name: 'Fetch Weather',

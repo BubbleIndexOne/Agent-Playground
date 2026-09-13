@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Connected Service Integration Form
+ *
+ * Form component for configuring external service connections (e.g., PostgreSQL database,
+ * Slack workspace, or custom HTTP API endpoints) adhering to the Model Context Protocol (MCP) pattern.
+ * Includes a simulated connection latency ping tester.
+ */
+
 import { useState } from 'react'
 import {
   ChevronDown,
@@ -11,19 +19,34 @@ import {
 } from 'lucide-react'
 import { Tool, ToolServiceConfig } from '../types'
 
-interface ConnectServiceFormProps {
+/**
+ * Props for the `ConnectServiceForm` component.
+ */
+export interface ConnectServiceFormProps {
+  /** Existing tool instance if editing an existing service connection */
   initialTool?: Tool | null
+  /** Callback to cancel and return to the main tools list */
   onCancel: () => void
+  /** Callback invoked when the service is validated and saved */
   onSave: (tool: Tool) => void
 }
 
-const SERVICES = [
+/**
+ * Supported service integration presets and metadata.
+ */
+export const SERVICES = [
   { id: 'postgresql', name: 'PostgreSQL Database', icon: Database },
   { id: 'slack', name: 'Slack Workspace', icon: MessageSquare },
   { id: 'custom', name: 'Custom HTTP Service', icon: Plug },
 ]
 
+/**
+ * Form for adding or editing an external service connection.
+ *
+ * @param props - Component props containing initial tool state and action handlers.
+ */
 export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectServiceFormProps) {
+
   const [name, setName] = useState(initialTool?.name || '')
   const [description, setDescription] = useState(initialTool?.description || '')
   const [serviceId, setServiceId] = useState(

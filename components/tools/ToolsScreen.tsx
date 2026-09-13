@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tools Workspace Main Screen
+ *
+ * Top-level view orchestrator for the Tools workspace.
+ * Coordinates:
+ * - Tab navigation (My Tools vs. Marketplace).
+ * - Multi-criteria search and filter queries.
+ * - Multi-step tool creation and editing lifecycle (Choose -> Client / Service -> Save).
+ * - Tool mutations (creation, duplication, deletion, publishing).
+ */
+
 import { useState, useMemo } from 'react'
 import { PanelLeft, Sparkles, Activity, Wrench } from 'lucide-react'
 import { Tool, CreationStep, ToolFilter } from './types'
@@ -8,7 +19,11 @@ import { ClientToolEditor } from './creation/ClientToolEditor'
 import { ConnectServiceForm } from './creation/ConnectServiceForm'
 import { INITIAL_TOOLS } from './constants'
 
+/**
+ * Main Tools screen component for viewing, creating, and modifying workspace tools.
+ */
 export function ToolsScreen() {
+
   const [activeTab, setActiveTab] = useState<'my-tools' | 'marketplace'>('my-tools')
   const [creationStep, setCreationStep] = useState<CreationStep>('none')
   const [editingTool, setEditingTool] = useState<Tool | null>(null)

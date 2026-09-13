@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Visual Tool Parameter Schema Builder
+ *
+ * Provides an interactive UI to inspect, add, update, and remove input parameters.
+ * Renders status badges indicating live sync status with the code editor's JSDoc comments
+ * ('parsing', 'error', 'success', 'idle').
+ */
+
 import { Plus, Trash2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { ToolParameter, ParameterType } from '../types'
 
@@ -5,6 +13,12 @@ import { ToolParametersBuilderProps } from './types'
 import { PARAM_TYPES } from './constants'
 import { useToolParameters } from './hooks/useToolParameters'
 
+/**
+ * Visual editor for configuring tool argument schemas.
+ * Synchronizes parameter names, types, descriptions, and required flags directly to code.
+ *
+ * @param props - ToolParametersBuilderProps including parameters list, handlers, and sync status.
+ */
 export function ToolParametersBuilder({
   parameters,
   onAddParam,
@@ -12,6 +26,7 @@ export function ToolParametersBuilder({
   onRemoveParam,
   parseStatus = 'idle'
 }: ToolParametersBuilderProps) {
+
   const { handleAdd, handleUpdate } = useToolParameters({ parameters, onAddParam, onUpdateParam })
 
   return (

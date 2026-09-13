@@ -1,9 +1,27 @@
+/**
+ * @fileoverview Tool Type Selector Modal Component
+ *
+ * Renders a card-based selector allowing the developer to choose between creating
+ * an in-browser Client Tool (JavaScript function) or linking an external Connected Service (MCP / DB).
+ */
+
 import { Code2, Plug } from 'lucide-react'
 
-interface ChooseToolTypeProps {
+/**
+ * Props for the `ChooseToolType` component.
+ */
+export interface ChooseToolTypeProps {
+  /** Callback fired when the user selects a tool type option ('client' or 'service') */
   onSelect: (type: 'client' | 'service') => void
 }
 
+/**
+ * Selection view presenting two distinct pathways for building capabilities:
+ * - Client tool: sandboxed JavaScript running in the browser.
+ * - Connect a service: external database, Slack, or REST API service.
+ *
+ * @param props - Component props containing the `onSelect` callback.
+ */
 export function ChooseToolType({ onSelect }: ChooseToolTypeProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12">
@@ -42,3 +60,4 @@ export function ChooseToolType({ onSelect }: ChooseToolTypeProps) {
     </div>
   )
 }
+

@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Live Tool Sandbox Execution Runner
+ *
+ * Provides a sandboxed browser runtime for executing and testing client tool functions.
+ * Features:
+ * - Isolated function execution using dynamic `AsyncFunction`.
+ * - Sandbox capability gates enforcing network, storage, and environment permissions.
+ * - Virtualized console log capture (`console.log`, `warn`, `error`).
+ * - Parameter-aware default JSON test arguments generator.
+ * - 8000ms safety execution timeout.
+ * - Resizable vertical split-panel layout.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import {
   Play,
@@ -11,14 +24,27 @@ import {
 } from 'lucide-react'
 import { ToolParameter, ToolCapabilities } from '../types'
 
-interface LiveTestSandboxProps {
+/**
+ * Props for the `LiveTestSandbox` component.
+ */
+export interface LiveTestSandboxProps {
+  /** The JavaScript source code of the tool being tested */
   code: string
+  /** Schema of parameters expected by the tool */
   parameters: ToolParameter[]
+  /** Sandbox permission capabilities (network, storage, environment) */
   capabilities: ToolCapabilities
+  /** Name of the tool for display in the console empty state */
   toolName: string
 }
 
+/**
+ * Interactive test runner and console for client tools.
+ *
+ * @param props - Component props containing tool source code, parameters, and capabilities.
+ */
 export function LiveTestSandbox({ code, parameters, capabilities, toolName }: LiveTestSandboxProps) {
+
   const [inputArgsJson, setInputArgsJson] = useState('{}')
   const [isRunning, setIsRunning] = useState(false)
   const [result, setResult] = useState<any>(null)

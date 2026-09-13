@@ -1,7 +1,22 @@
+/**
+ * @fileoverview Tools Screen Header Component
+ *
+ * Renders the top navigation and filtering controls for the Tools screen:
+ * - Tab switcher between "My Tools" and "Marketplace" with badge counter.
+ * - Primary "New Tool" call-to-action button.
+ * - Live search input with instant clear button.
+ * - Horizontal filter pill list for tool categories (All, Client, Connected, Published, Drafts).
+ */
+
 import { Plus, Search, X } from 'lucide-react'
 import { ToolFilter, ToolsHeaderProps } from './types'
 import { FILTER_OPTIONS } from './constants'
 
+/**
+ * Top control bar for the Tools workspace.
+ *
+ * @param props - ToolsHeaderProps including tab state, search state, filter state, and callbacks.
+ */
 export function ToolsHeader({
   activeTab,
   onTabChange,
@@ -12,6 +27,7 @@ export function ToolsHeader({
   onNewTool,
   toolCount,
 }: ToolsHeaderProps) {
+
   return (
     <div className="flex flex-col gap-4 border-b border-border pb-5">
       {/* Top Row: Tabs & New Tool Action */}

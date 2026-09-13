@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Main Application Playground & Workspace Interface
+ *
+ * Provides the interactive LLM workbench:
+ * - Dynamic prompt template authoring with automatic variable detection (`{{var}}`).
+ * - Multi-provider and model selector with BYOK session storage.
+ * - Basic & advanced hyper-parameter tuning panel (temperature, top-P, top-K, penalties, seed).
+ * - Real-time model execution via Vercel AI SDK.
+ * - Dual output viewing (Markdown with syntax highlighting vs. raw JSON).
+ * - Latency and token usage telemetry.
+ * - Integrated navigation to the Tools workspace.
+ */
+
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
@@ -11,6 +24,7 @@ import { DEFAULT_MODEL_CONFIGS } from '@/src/lib/constants'
 import ReactMarkdown from 'react-markdown'
 import { ToolsScreen } from '@/components/tools/ToolsScreen'
 
+/** Navigation sidebar items and routing targets */
 const navigation = [
   { label: 'Playground', description: 'Experiment with models', icon: Play },
   { label: 'Tools', description: 'Reusable capabilities', icon: Wrench },
@@ -18,10 +32,18 @@ const navigation = [
   { label: 'History', description: 'Your recent runs', icon: Clock3 },
 ]
 
+/**
+ * Workspace brand logo component.
+ */
 function Logo() {
   return <div className="flex items-center gap-3"><div className="flex size-8 items-center justify-center rounded-[10px] bg-primary text-primary-foreground"><Command className="size-4" strokeWidth={2.5} /></div><span className="text-[15px] font-semibold tracking-[-0.02em]">Console</span></div>
 }
 
+/**
+ * Responsive navigation sidebar.
+ *
+ * @param props - Sidebar props including `active` tab identifier and `onSelect` callback.
+ */
 function Sidebar({ active, onSelect }: { active: string; onSelect: (label: string) => void }) {
   const [open, setOpen] = useState(false)
   return <>
@@ -35,10 +57,21 @@ function Sidebar({ active, onSelect }: { active: string; onSelect: (label: strin
   </>
 }
 
+/**
+ * Status pill button rendered in the header for quick model identification and settings access.
+ *
+ * @param props - Status pill properties (icon, label, display value, click handler, and connection indicator).
+ */
 function StatusPill({ icon: Icon, label, value, onClick, connected = false }: { icon: typeof Activity; label: string; value: string; onClick: () => void; connected?: boolean }) {
   return <button onClick={onClick} className="group flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 transition-colors hover:border-primary/50 hover:bg-accent" aria-label={`${label}: ${value}. Open model settings`}><Icon className="size-3.5 text-muted-foreground group-hover:text-primary" /><span className="hidden text-[11px] text-muted-foreground sm:inline">{label}</span><span className="text-[11px] font-medium text-foreground">{value}</span>{connected ? <span className="size-1.5 rounded-full bg-emerald-400" /> : <ChevronDown className="size-3 text-muted-foreground" />}</button>
 }
 
+
+/**
+ * Modal dialog for configuring the active model provider, model selection, and API key.
+ *
+ * @param props - Dialog properties including providers list, current selections, update callbacks, and close handler.
+ */
 function BasicModelSettings({ providers, providerId, modelId, apiKey, setProviderId, setModelId, setApiKey, onClose }: { providers: Provider[]; providerId: string; modelId: string; apiKey: string; setProviderId: (v: string) => void; setModelId: (v: string) => void; setApiKey: (v: string) => void; onClose: () => void }) {
   const [draftProvider, setDraftProvider] = useState(providerId)
   const [draftModel, setDraftModel] = useState(modelId)
@@ -73,7 +106,13 @@ function BasicModelSettings({ providers, providerId, modelId, apiKey, setProvide
   </div>
 }
 
+/**
+ * Slide-over drawer for advanced hyper-parameter tuning (creativity, length, sampling, penalties, seed).
+ *
+ * @param props - Advanced tuning drawer properties including providers, models, config state, and callbacks.
+ */
 function AdvancedModelSettings({ providers, providerId, modelId, apiKey, configs, setProviderId, setModelId, setApiKey, setConfigs, onClose }: { providers: Provider[]; providerId: string; modelId: string; apiKey: string; configs: ModelConfig; setProviderId: (v: string) => void; setModelId: (v: string) => void; setApiKey: (v: string) => void; setConfigs: (v: ModelConfig) => void; onClose: () => void }) {
+
   const [draftProvider, setDraftProvider] = useState(providerId)
   const [draftModel, setDraftModel] = useState(modelId)
   const [draftKey, setDraftKey] = useState(apiKey)
@@ -218,7 +257,19 @@ function AdvancedModelSettings({ providers, providerId, modelId, apiKey, configs
   </div>
 }
 
+/**
+ * Main application page component orchestrating playground states and tab transitions.
+ *
+ * Manages:
+ * - Active view navigation ('Playground' vs 'Tools').
+ * - Dynamic prompt template parsing (`{{variable}}` regex extraction).
+ * - Variable input state mapping and validation.
+ * - Model call execution lifecycle with latency and token metrics.
+ * - Keyboard shortcuts (`Ctrl+Enter` / `Cmd+Enter` to run).
+ * - Modal and drawer state for basic and advanced configuration.
+ */
 export default function Page() {
+
   const [active, setActive] = useState('Playground')
   const [prompt, setPrompt] = useState('Summarize the following text in {{style}} style:\n\n{{content}}')
   const [values, setValues] = useState<Record<string, string>>({ style: '', content: '' })

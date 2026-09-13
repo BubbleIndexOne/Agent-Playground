@@ -1,15 +1,45 @@
+/**
+ * @fileoverview Bi-Directional JSDoc & Code Synchronization Engine
+ *
+ * Provides utilities to parse JSDoc comments from JavaScript code and synchronize
+ * parameter definitions bi-directionally between visual UI editors and code.
+ *
+ * Functions include surgical regex-based mutations that modify specific parameter lines
+ * in the JSDoc block without altering the user's custom function logic or code formatting.
+ */
+
 import { ToolParameter, ParameterType } from '../types'
 import { parse as parseJSDoc } from 'comment-parser'
 
 /**
- * Parses JSDoc comments from JavaScript code to infer parameters,
- * tool title, and descriptions. This makes the code the single source of truth.
+ * Result object returned when parsing parameters and metadata from code.
  */
-export function parseParametersFromCode(code: string): {
+export interface ParsedCodeMetadata {
+  /** List of extracted parameters from `@param` tags */
   parameters: ToolParameter[]
+  /** Extracted tool title from the first line of the JSDoc description */
   extractedTitle?: string
+  /** Extracted tool description from subsequent lines of the JSDoc description */
   extractedDescription?: string
-} {
+}
+
+/**
+ * Parses JSDoc comments from JavaScript code to extract typed parameters,
+ * tool title, and descriptions. Treats code as the authoritative source of truth.
+ *
+ * Recognizes `@param {type} args.paramName - description` tags and maps raw types
+ * (e.g., 'integer', 'float', 'json', 'list') to canonical ParameterTypes ('string', 'number', 'boolean', 'object', 'array').
+ *
+ * @param code - The JavaScript source code containing JSDoc comments.
+ * @returns ParsedCodeMetadata containing extracted parameters, title, and description.
+ *
+ * @example
+ * ```ts
+ * const meta = parseParametersFromCode(code);
+ * console.log(meta.extractedTitle, meta.parameters);
+ * ```
+ */
+export function parseParametersFromCode(code: string): ParsedCodeMetadata {
   const parameters: ToolParameter[] = []
   let extractedTitle: string | undefined
   let extractedDescription: string | undefined
@@ -70,7 +100,15 @@ export function parseParametersFromCode(code: string): {
 }
 
 /**
- * Surgically updates a specific parameter line in the JSDoc block.
+ * Surgically updates a specific parameter line in the JSDoc comment block without
+ * touching any surrounding code or comments.
+ *
+ * Formats optional parameters as `[args.paramName="default"]` and required as `args.paramName`.
+ *
+ * @param code - The original source code.
+ * @param oldParamName - The original name of the parameter before update.
+ * @param updatedParam - The updated ToolParameter definition.
+ * @returns Modified source code with the replaced parameter line.
  */
 export function surgicallyUpdateParamInCode(
   code: string,
@@ -97,7 +135,12 @@ export function surgicallyUpdateParamInCode(
 }
 
 /**
- * Surgically adds a new parameter to the JSDoc block.
+ * Surgically appends a new parameter to the JSDoc block immediately before the `@returns`
+ * tag or before the closing comment delimiter `*\/`.
+ *
+ * @param code - The original source code.
+ * @param newParam - The new ToolParameter definition to insert.
+ * @returns Modified source code containing the new parameter tag.
  */
 export function surgicallyAddParamToCode(code: string, newParam: ToolParameter): string {
   const isOptional = !newParam.required
@@ -119,7 +162,11 @@ export function surgicallyAddParamToCode(code: string, newParam: ToolParameter):
 }
 
 /**
- * Surgically removes a parameter from the JSDoc block.
+ * Surgically deletes a parameter tag line from the JSDoc block using regex.
+ *
+ * @param code - The original source code.
+ * @param paramName - The name of the parameter tag to remove.
+ * @returns Modified source code without the removed parameter line.
  */
 export function surgicallyRemoveParamFromCode(code: string, paramName: string): string {
   const regex = new RegExp(`\\n?[ \\t]*\\*[ \\t]*@param\\s+\\{[^}]+\\}\\s+(?:\\[?)args\\.${paramName}(?:(?:=[^\\]]+)?\\]?)?[^\\n]*`, 'i')
@@ -127,7 +174,13 @@ export function surgicallyRemoveParamFromCode(code: string, paramName: string): 
 }
 
 /**
- * Generates a complete fresh starter scaffold if the user explicitly wants to reset to template.
+ * Generates a complete fresh starter scaffold for a client-side tool function,
+ * including structured JSDoc comments, destructuring arguments, and a try/catch execution block.
+ *
+ * @param name - The tool function title.
+ * @param description - High-level purpose and usage explanation for the AI.
+ * @param parameters - Array of initial input parameters to document and destructure.
+ * @returns Standardized JavaScript source code template string.
  */
 export function generateFreshTemplate(
   name: string,
@@ -179,3 +232,5 @@ export async function execute(args) {
   }
 }`
 }
+
+
