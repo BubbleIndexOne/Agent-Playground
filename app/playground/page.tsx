@@ -1,8 +1,7 @@
 /**
- * @fileoverview Root Route (/)
+ * @fileoverview Playground Alias Route (/playground)
  *
- * Automatically forwards to the canonical default home route (/home)
- * while seamlessly displaying the Playground workspace on initial render.
+ * Redirects to the canonical default home route (/home).
  */
 
 'use client'
@@ -12,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { PlaygroundScreen } from '@/components/playground/PlaygroundScreen'
 
-export default function RootPage() {
+export default function PlaygroundAliasPage() {
   const router = useRouter()
 
   useEffect(() => {
