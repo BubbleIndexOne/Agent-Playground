@@ -29,6 +29,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { tokenStorage } from '@/api/requests'
 import { LoomIcon } from '@/components/ui/LoomIcon'
 
 // ─── OAuth Button ─────────────────────────────────────────────────────────────
@@ -474,7 +475,7 @@ export default function LoginPage() {
 
   // Redirect already-authenticated users to the workspace
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if ((!authLoading && isAuthenticated) || tokenStorage.hasAuthToken()) {
       router.replace('/home')
     }
   }, [isAuthenticated, authLoading, router])

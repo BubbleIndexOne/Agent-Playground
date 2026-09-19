@@ -27,6 +27,27 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       return new Response("Not found", { status: 404 });
     }
+
+    const cookieHeader = request.headers.get("Cookie") || "";
+    const hasAuthToken = /(?:^|;\s*)ap_access_token=([^;]+)/.test(cookieHeader);
+
+    // If accessing root or /login while carrying an active auth cookie, route to /home
+    if ((url.pathname === "/" || url.pathname === "/login") && hasAuthToken) {
+      return Response.redirect(new URL("/home", request.url), 302);
+    }
+
+    // If accessing protected workspace routes without an auth cookie, route to /login
+    const isProtectedRoute =
+      url.pathname.startsWith("/home") ||
+      url.pathname.startsWith("/playground") ||
+      url.pathname.startsWith("/agents") ||
+      url.pathname.startsWith("/tools") ||
+      url.pathname.startsWith("/history");
+
+    if (isProtectedRoute && !hasAuthToken) {
+      return Response.redirect(new URL("/login", request.url), 302);
+    }
+
     return env.ASSETS.fetch(request);
   },
 };

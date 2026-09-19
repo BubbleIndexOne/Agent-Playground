@@ -10,9 +10,9 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Bot,
   ChevronDown,
@@ -27,6 +27,7 @@ import {
   User,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { tokenStorage } from '@/api/requests'
 
 /** Navigation items specification */
 export const NAVIGATION_ITEMS = [
@@ -229,6 +230,24 @@ export function Sidebar() {
  * Common workspace wrapper surrounding route pages with the sidebar.
  */
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !tokenStorage.hasAuthToken()) {
+      router.replace('/login')
+    }
+  }, [isLoading, isAuthenticated, router])
+
+  // While validating session on initial page load, prevent flash of workspace contents
+  if (isLoading || (!isAuthenticated && !tokenStorage.hasAuthToken())) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#070709]">
+        <LoomIcon className="size-8 text-indigo-400 animate-pulse" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar />

@@ -22,26 +22,36 @@ const REFRESH_TOKEN_KEY = 'ap_refresh_token'
 export const tokenStorage = {
   getAccessToken(): string | null {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem(ACCESS_TOKEN_KEY)
+    const fromLocal = localStorage.getItem(ACCESS_TOKEN_KEY)
+    if (fromLocal) return fromLocal
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)${ACCESS_TOKEN_KEY}=([^;]+)`))
+    return match ? decodeURIComponent(match[2]) : null
   },
   setAccessToken(token: string | null): void {
     if (typeof window === 'undefined') return
     if (token) {
       localStorage.setItem(ACCESS_TOKEN_KEY, token)
+      document.cookie = `${ACCESS_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`
     } else {
       localStorage.removeItem(ACCESS_TOKEN_KEY)
+      document.cookie = `${ACCESS_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`
     }
   },
   getRefreshToken(): string | null {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
+    const fromLocal = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (fromLocal) return fromLocal
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)${REFRESH_TOKEN_KEY}=([^;]+)`))
+    return match ? decodeURIComponent(match[2]) : null
   },
   setRefreshToken(token: string | null): void {
     if (typeof window === 'undefined') return
     if (token) {
       localStorage.setItem(REFRESH_TOKEN_KEY, token)
+      document.cookie = `${REFRESH_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`
     } else {
       localStorage.removeItem(REFRESH_TOKEN_KEY)
+      document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`
     }
   },
   setTokens(tokens: AuthTokensResponse): void {
@@ -52,6 +62,14 @@ export const tokenStorage = {
     if (typeof window === 'undefined') return
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem(REFRESH_TOKEN_KEY)
+    document.cookie = `${ACCESS_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`
+    document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`
+  },
+  hasAuthToken(): boolean {
+    if (typeof window === 'undefined') return false
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)${ACCESS_TOKEN_KEY}=([^;]+)`))
+    if (match && match[2]) return true
+    return !!localStorage.getItem(ACCESS_TOKEN_KEY)
   },
 }
 
