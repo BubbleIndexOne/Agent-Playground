@@ -36,37 +36,16 @@ export const NAVIGATION_ITEMS = [
   { label: 'History', description: 'Your recent runs', icon: Clock3, href: '/history' },
 ]
 
-/**
- * Loom infinity brand mark icon.
- */
-function LoomIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4z" />
-      <path d="M12 12c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4z" />
-    </svg>
-  )
-}
+import { LoomIcon } from '@/components/ui/LoomIcon'
 
 /**
  * Workspace brand logo component.
  */
 export function Logo() {
   return (
-    <Link href="/home" className="flex items-center gap-3">
-      <div className="flex size-8 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
-        <LoomIcon className="size-4" />
-      </div>
-      <span className="text-[15px] font-semibold tracking-[-0.02em]">Loom</span>
+    <Link href="/home" className="flex items-center gap-2.5">
+      <LoomIcon className="size-6 text-primary transition-transform hover:scale-105" />
+      <span className="text-[16px] font-semibold tracking-[-0.02em] text-foreground">Loom</span>
     </Link>
   )
 }

@@ -8,7 +8,7 @@
  */
 
 import { Analytics } from '@vercel/analytics/next'
-import { Geist, JetBrains_Mono } from 'next/font/google'
+import { Geist, JetBrains_Mono, Caveat } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/context/AuthContext'
 import { HealthStatusBanner } from '@/components/health/HealthStatusBanner'
@@ -19,6 +19,9 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 
 /** Monospace typography font for code blocks and JSON inspectors */
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
+
+/** Handwritten script font for annotations */
+const caveat = Caveat({ subsets: ['latin'], variable: '--font-caveat', weight: ['600', '700'] })
 
 /** Global application metadata for SEO and page title */
 export const metadata: Metadata = {
@@ -40,7 +43,7 @@ export const viewport: Viewport = {
  */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${jetbrainsMono.variable} bg-background`}>
+    <html lang="en" className={`${geist.variable} ${jetbrainsMono.variable} ${caveat.variable} bg-background`}>
       <body className="antialiased">
         <AuthProvider>
           <HealthStatusBanner />
