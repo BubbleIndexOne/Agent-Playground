@@ -24,7 +24,10 @@ import {
   Settings2,
   Wrench,
   X,
+  LogOut,
+  User,
 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 /** Navigation items specification */
 export const NAVIGATION_ITEMS = [
@@ -61,6 +64,17 @@ export function Sidebar() {
     }
     return pathname.startsWith(href)
   }
+
+  const { user, logout, isLoading } = useAuth()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const initials = user
+    ? ((user.first_name?.[0] || '') + (user.last_name?.[0] || user.display_name?.[0] || 'U')).toUpperCase()
+    : 'U'
+  const displayName = user
+    ? user.display_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'User'
+    : 'Guest User'
+  const userSubtext = user ? user.email : 'Personal workspace'
 
   return (
     <>
@@ -155,15 +169,56 @@ export function Sidebar() {
             <Settings2 className="size-[17px]" strokeWidth={1.8} />
             <span className="text-[13px] font-medium">Settings</span>
           </button>
-          <div className="mt-2 flex items-center gap-3 rounded-lg bg-accent/60 px-3 py-2.5">
-            <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
-              JD
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-[12px] font-medium">Jordan Davis</p>
-              <p className="truncate text-[11px] text-muted-foreground">Personal workspace</p>
-            </div>
-            <ChevronDown className="ml-auto size-3.5 text-muted-foreground" />
+
+          <div className="relative mt-2">
+            <button
+              onClick={() => setShowUserMenu((prev) => !prev)}
+              aria-label="User profile options"
+              className="flex w-full items-center gap-3 rounded-lg bg-accent/60 px-3 py-2.5 text-left transition-colors hover:bg-accent"
+            >
+              <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                {isLoading ? '...' : initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-medium text-foreground">
+                  {isLoading ? 'Loading...' : displayName}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {isLoading ? 'Fetching profile...' : userSubtext}
+                </p>
+              </div>
+              <ChevronDown
+                className={`ml-auto size-3.5 text-muted-foreground transition-transform duration-150 ${
+                  showUserMenu ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute bottom-full left-0 mb-1.5 w-full rounded-lg border border-border bg-card p-1 shadow-lg backdrop-blur-md">
+                {user ? (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false)
+                      logout()
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12px] font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    <LogOut className="size-3.5" />
+                    <span>Sign out</span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-accent"
+                  >
+                    <User className="size-3.5 text-muted-foreground" />
+                    <span>Sign in / Register</span>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </aside>
