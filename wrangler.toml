@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-08-22"
 
 [vars]
-NEXT_PUBLIC_API_BASE_URL = "http://localhost:8787"
+NEXT_PUBLIC_API_BASE_URL = "https://agent-playground-backend-dev.bubbleindexone-dev.workers.dev"
 
 [assets]
 directory = "./out"
@@ -12,7 +12,7 @@ directory = "./out"
 name = "agent-playground-dev"
 
 [env.dev.vars]
-NEXT_PUBLIC_API_BASE_URL = "http://localhost:8787"
+NEXT_PUBLIC_API_BASE_URL = "https://agent-playground-backend-dev.bubbleindexone-dev.workers.dev"
 
 [env.dev.assets]
 directory = "./out"
@@ -21,7 +21,7 @@ directory = "./out"
 name = "agent-playground"
 
 [env.production.vars]
-NEXT_PUBLIC_API_BASE_URL = "https://agent-playground-backend-prod.workers.dev"
+NEXT_PUBLIC_API_BASE_URL = "https://agent-playground-backend-prod.bubbleindexone-dev.workers.dev"
 
 [env.production.assets]
 directory = "./out"
