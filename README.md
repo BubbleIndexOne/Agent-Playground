@@ -1,6 +1,6 @@
-# Agent Playground 🚀
+# Loom
 
-A modern, fast, and unified AI Playground built with **Next.js**, **Tailwind CSS**, and the **Vercel AI SDK**. Experiment with different LLM providers (Anthropic, OpenAI, Google), craft prompt templates with dynamic variables, tune model hyper-parameters, and evaluate responses side-by-side in real-time.
+A modern AI architecture studio built with **Next.js**, **Tailwind CSS**, and the **Vercel AI SDK**. Compose agents, connect tools, and deploy powerful AI systems — all in one place.
 
 ---
 

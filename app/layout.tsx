@@ -22,8 +22,8 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jet
 
 /** Global application metadata for SEO and page title */
 export const metadata: Metadata = {
-  title: 'Agent Playground — Developer workspace',
-  description: 'A calm, approachable workspace for experimenting with LLMs and prompt engineering.',
+  title: 'Loom — An architecture studio for AI systems',
+  description: 'Compose agents, connect tools, and deploy powerful AI systems — all in one place.',
 }
 
 /** Global mobile viewport and theme color configuration */

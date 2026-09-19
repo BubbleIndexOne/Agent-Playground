@@ -18,7 +18,6 @@ import {
   ChevronDown,
   CircleHelp,
   Clock3,
-  Command,
   Menu,
   Play,
   Settings2,
@@ -38,15 +37,36 @@ export const NAVIGATION_ITEMS = [
 ]
 
 /**
+ * Loom infinity brand mark icon.
+ */
+function LoomIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4z" />
+      <path d="M12 12c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4z" />
+    </svg>
+  )
+}
+
+/**
  * Workspace brand logo component.
  */
 export function Logo() {
   return (
     <Link href="/home" className="flex items-center gap-3">
       <div className="flex size-8 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
-        <Command className="size-4" strokeWidth={2.5} />
+        <LoomIcon className="size-4" />
       </div>
-      <span className="text-[15px] font-semibold tracking-[-0.02em]">Console</span>
+      <span className="text-[15px] font-semibold tracking-[-0.02em]">Loom</span>
     </Link>
   )
 }
