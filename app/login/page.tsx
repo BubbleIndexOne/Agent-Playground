@@ -10,7 +10,7 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Eye,
@@ -122,17 +122,59 @@ function FormInput({
 // ─── Architecture Flow Diagram ────────────────────────────────────────────────
 
 function ArchitectureDiagram() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!containerRef.current) return
+      const availableWidth = containerRef.current.clientWidth
+      if (availableWidth > 0) {
+        // Design canvas is strictly 920px
+        const newScale = Math.min(1, Math.max(0.35, availableWidth / 920))
+        setScale(newScale)
+      }
+    }
+
+    handleResize()
+    const ro = new ResizeObserver(handleResize)
+    if (containerRef.current) {
+      ro.observe(containerRef.current)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
   return (
-    <div className="relative my-4 w-[920px] h-[340px] max-w-full select-none mx-auto">
-      {/* Dynamic Curved SVG Connector Lines with Subtly Dimmed Glow */}
-      <svg
-        className="pointer-events-none absolute inset-0 size-full"
-        viewBox="0 0 920 340"
-        fill="none"
+    <div ref={containerRef} className="w-full flex justify-center items-center select-none my-3 overflow-visible">
+      <div
+        style={{
+          width: `${Math.round(920 * scale)}px`,
+          height: `${Math.round(340 * scale)}px`,
+        }}
+        className="relative shrink-0 overflow-visible transition-[width,height] duration-75"
       >
-        <defs>
-          {/* Soft Dimmed Glow Filter */}
-          <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <div
+          style={{
+            width: '920px',
+            height: '340px',
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+          className="absolute left-0 top-0 shrink-0"
+        >
+          {/* Dynamic Curved SVG Connector Lines with Subtly Dimmed Glow */}
+          <svg
+            className="pointer-events-none absolute inset-0 w-[920px] h-[340px]"
+            viewBox="0 0 920 340"
+            fill="none"
+          >
+            <defs>
+              {/* Soft Dimmed Glow Filter */}
+              <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="2" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -407,6 +449,8 @@ function ArchitectureDiagram() {
           And so<br />much more.
         </p>
       </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -468,7 +512,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen bg-[#070709] text-foreground">
 
       {/* ── Left Panel ─────────────────────────────────────────────────────── */}
-      <div className="relative flex w-full max-w-full lg:max-w-[440px] xl:max-w-[460px] shrink-0 flex-col justify-between border-r border-white/[0.06] bg-[#090a0d] px-8 sm:px-12 py-8 z-10">
+      <div className="relative flex w-full max-w-full lg:max-w-[440px] xl:max-w-[460px] shrink-0 flex-col justify-between border-r border-white/[0.06] bg-[#090a0d] px-8 sm:px-12 py-8 z-10 overflow-y-auto">
         
         {/* Brand header */}
         <div>
@@ -640,10 +684,10 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right Panel ────────────────────────────────────────────────────── */}
-      <div className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[#06070a] p-10 lg:flex select-none">
+      <div className="relative hidden flex-1 flex-col justify-between overflow-y-auto overflow-x-hidden bg-[#06070a] p-6 lg:p-8 xl:p-10 lg:flex select-none">
 
         {/* ── Background Cosmic Canvas & Luminous Earth Horizon ── */}
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {/* Subtle Grid overlay */}
           <div
             className="absolute inset-0 opacity-[0.03]"
@@ -684,56 +728,56 @@ export default function LoginPage() {
         </div>
 
         {/* Central Content (Hero & Architecture Diagram) */}
-        <div className="relative z-10 my-auto flex flex-col justify-center px-6 lg:px-10 py-4 max-w-5xl mx-auto w-full">
+        <div className="relative z-10 my-auto flex flex-col justify-center px-2 sm:px-4 lg:px-6 py-4 max-w-5xl mx-auto w-full">
           <div>
-            <h2 className="text-[44px] xl:text-[50px] font-bold leading-[1.08] tracking-[-0.03em] text-white">
+            <h2 className="text-[34px] sm:text-[40px] xl:text-[48px] font-bold leading-[1.08] tracking-[-0.03em] text-white">
               From ideas<br />
               <span className="bg-gradient-to-r from-[#7082ff] via-[#a5b4fc] to-[#5567f7] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(112,130,255,0.45)]">
                 to intelligent systems.
               </span>
             </h2>
-            <p className="mt-3.5 max-w-xl text-[14px] leading-relaxed text-zinc-400">
+            <p className="mt-3 max-w-xl text-[13px] sm:text-[14px] leading-relaxed text-zinc-400">
               Compose agents, connect tools, and deploy powerful AI systems — all in one place.
             </p>
           </div>
 
           {/* Central Architecture Studio Visual */}
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <ArchitectureDiagram />
           </div>
 
           {/* Bottom 3-Card Feature Highlights (Ref: Img 2) */}
-          <div className="mt-6 grid grid-cols-3 gap-3.5">
+          <div className="mt-5 sm:mt-6 grid grid-cols-3 gap-2.5 xl:gap-3.5">
             {/* Card 1 */}
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3.5 shadow-lg backdrop-blur-md">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
-                <Zap className="size-4" />
+            <div className="flex items-center gap-2.5 xl:gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3 xl:p-3.5 shadow-lg backdrop-blur-md min-w-0">
+              <div className="flex size-7 xl:size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
+                <Zap className="size-3.5 xl:size-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-white">Build your way</p>
-                <p className="mt-0.5 text-[11px] text-zinc-400 truncate">Use what you need. Start simple, scale later.</p>
+                <p className="text-[11px] xl:text-[12px] font-semibold text-white truncate">Build your way</p>
+                <p className="mt-0.5 text-[10px] xl:text-[11px] text-zinc-400 line-clamp-2 leading-tight">Use what you need. Start simple, scale later.</p>
               </div>
             </div>
 
             {/* Card 2 */}
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3.5 shadow-lg backdrop-blur-md">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
-                <BarChart2 className="size-4" />
+            <div className="flex items-center gap-2.5 xl:gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3 xl:p-3.5 shadow-lg backdrop-blur-md min-w-0">
+              <div className="flex size-7 xl:size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
+                <BarChart2 className="size-3.5 xl:size-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-white">Stay in control</p>
-                <p className="mt-0.5 text-[11px] text-zinc-400 truncate">Test, iterate, and refine with confidence.</p>
+                <p className="text-[11px] xl:text-[12px] font-semibold text-white truncate">Stay in control</p>
+                <p className="mt-0.5 text-[10px] xl:text-[11px] text-zinc-400 line-clamp-2 leading-tight">Test, iterate, and refine with confidence.</p>
               </div>
             </div>
 
             {/* Card 3 */}
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3.5 shadow-lg backdrop-blur-md">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
-                <Package className="size-4" />
+            <div className="flex items-center gap-2.5 xl:gap-3 rounded-xl border border-white/[0.08] bg-[#0d0f19]/80 p-3 xl:p-3.5 shadow-lg backdrop-blur-md min-w-0">
+              <div className="flex size-7 xl:size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
+                <Package className="size-3.5 xl:size-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-white">Ship what works</p>
-                <p className="mt-0.5 text-[11px] text-zinc-400 truncate">Turn ideas into real impact.</p>
+                <p className="text-[11px] xl:text-[12px] font-semibold text-white truncate">Ship what works</p>
+                <p className="mt-0.5 text-[10px] xl:text-[11px] text-zinc-400 line-clamp-2 leading-tight">Turn ideas into real impact.</p>
               </div>
             </div>
           </div>
