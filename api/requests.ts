@@ -12,7 +12,7 @@
 import { AuthTokensResponse, ErrorResponse } from './types'
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || 'http://localhost:8787'
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || ''
 
 const ACCESS_TOKEN_KEY = 'ap_access_token'
 const REFRESH_TOKEN_KEY = 'ap_refresh_token'
