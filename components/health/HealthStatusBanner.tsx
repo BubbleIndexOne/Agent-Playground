@@ -6,13 +6,13 @@
  * - Client network loss (navigator.onLine === false).
  * - Server unreachable or unhealthy status.
  *
- * Renders a discreet top-right floating pill that does not interrupt usability.
+ * Renders a discreet top-right floating notification that does not interrupt usability.
  */
 
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
-import { WifiOff, ServerCrash, CheckCircle2, X } from 'lucide-react'
+import { WifiOff, Radio, CheckCircle2, X } from 'lucide-react'
 import { getHealth } from '@/api/health'
 
 type HealthStatus = 'healthy' | 'server_unreachable' | 'offline'
@@ -50,7 +50,6 @@ export function HealthStatusBanner() {
 
         if (response && response.status === 'ok') {
           if (wasUnhealthy) {
-            // Briefly show restored indicator
             setShowRestoredNotice(true)
             setTimeout(() => {
               if (isMounted) setShowRestoredNotice(false)
@@ -71,10 +70,8 @@ export function HealthStatusBanner() {
       }
     }
 
-    // Run immediately on mount
     checkStatus()
 
-    // Setup 5.5-second polling interval
     pollTimerRef.current = setInterval(checkStatus, 5500)
 
     const handleOnline = () => checkStatus()
@@ -95,7 +92,6 @@ export function HealthStatusBanner() {
     }
   }, [wasUnhealthy])
 
-  // Don't render if healthy and no temporary restored message, or if user dismissed
   if ((status === 'healthy' && !showRestoredNotice) || isDismissed) {
     return null
   }
@@ -105,7 +101,7 @@ export function HealthStatusBanner() {
       aria-label="System status notification"
       className="fixed top-4 right-4 z-50 pointer-events-none flex max-w-[340px] flex-col transition-all duration-300 animate-in fade-in slide-in-from-top-3"
     >
-      <div className="pointer-events-auto flex items-start gap-3 rounded-xl border border-border/80 bg-card/90 px-3.5 py-3 shadow-xl backdrop-blur-md">
+      <div className="pointer-events-auto flex items-start gap-3 rounded-xl border border-border/80 bg-card/95 px-3.5 py-3 shadow-xl backdrop-blur-md">
         {/* Status icon with pulse */}
         <div className="mt-0.5 shrink-0">
           {status === 'offline' && (
@@ -114,8 +110,8 @@ export function HealthStatusBanner() {
             </div>
           )}
           {status === 'server_unreachable' && (
-            <div className="flex size-7 items-center justify-center rounded-lg bg-red-500/15 text-red-400 ring-1 ring-red-500/30">
-              <ServerCrash className="size-4" />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
+              <Radio className="size-4 animate-pulse" />
             </div>
           )}
           {status === 'healthy' && showRestoredNotice && (
@@ -125,7 +121,7 @@ export function HealthStatusBanner() {
           )}
         </div>
 
-        {/* Message details */}
+        {/* User-friendly message details */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span
@@ -133,24 +129,24 @@ export function HealthStatusBanner() {
                 status === 'offline'
                   ? 'bg-amber-400 animate-pulse'
                   : status === 'server_unreachable'
-                  ? 'bg-red-400 animate-pulse'
+                  ? 'bg-amber-400 animate-pulse'
                   : 'bg-emerald-400'
               }`}
             />
             <p className="text-[12px] font-semibold leading-tight text-foreground">
               {status === 'offline'
-                ? 'No Internet Connection'
+                ? 'Offline Mode'
                 : status === 'server_unreachable'
-                ? 'Backend Unavailable'
-                : 'Connection Restored'}
+                ? 'Connecting to Services...'
+                : 'Connected'}
             </p>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             {status === 'offline'
-              ? 'Check your network. Requests may fail until you reconnect.'
+              ? 'No internet connection detected. Check your network to continue.'
               : status === 'server_unreachable'
-              ? 'Cannot reach backend API. Retrying in background...'
-              : 'Backend service and databases are responding normally.'}
+              ? 'Unable to reach workspace server. Reconnecting automatically...'
+              : 'All workspace services are online.'}
           </p>
         </div>
 

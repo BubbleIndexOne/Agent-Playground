@@ -2,15 +2,26 @@ name = "agent-playground"
 main = "src/index.ts"
 compatibility_date = "2026-08-22"
 
+[vars]
+NEXT_PUBLIC_API_BASE_URL = "http://localhost:8787"
+
 [assets]
 directory = "./out"
 
 [env.dev]
 name = "agent-playground-dev"
+
+[env.dev.vars]
+NEXT_PUBLIC_API_BASE_URL = "http://localhost:8787"
+
 [env.dev.assets]
 directory = "./out"
 
 [env.production]
 name = "agent-playground"
+
+[env.production.vars]
+NEXT_PUBLIC_API_BASE_URL = "https://agent-playground-backend-prod.workers.dev"
+
 [env.production.assets]
 directory = "./out"
