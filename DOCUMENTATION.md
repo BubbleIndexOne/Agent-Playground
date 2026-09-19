@@ -1,6 +1,6 @@
-# Agent Playground — Technical Architecture & Route Hierarchy Documentation
+# Loom — Technical Architecture & Route Hierarchy Documentation
 
-This document provides a comprehensive technical overview and module-by-module reference for the **Agent Playground** codebase.
+This document provides a comprehensive technical overview and module-by-module reference for the **Loom** codebase.
 
 ---
 

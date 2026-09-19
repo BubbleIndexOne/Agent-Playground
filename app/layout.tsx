@@ -8,8 +8,10 @@
  */
 
 import { Analytics } from '@vercel/analytics/next'
-import { Geist, JetBrains_Mono } from 'next/font/google'
+import { Geist, JetBrains_Mono, Caveat } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
+import { AuthProvider } from '@/context/AuthContext'
+import { HealthStatusBanner } from '@/components/health/HealthStatusBanner'
 import './globals.css'
 
 /** Primary sans-serif typography font */
@@ -18,10 +20,13 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 /** Monospace typography font for code blocks and JSON inspectors */
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
 
+/** Handwritten script font for annotations */
+const caveat = Caveat({ subsets: ['latin'], variable: '--font-caveat', weight: ['600', '700'] })
+
 /** Global application metadata for SEO and page title */
 export const metadata: Metadata = {
-  title: 'Agent Playground — Developer workspace',
-  description: 'A calm, approachable workspace for experimenting with LLMs and prompt engineering.',
+  title: 'Loom — An architecture studio for AI systems',
+  description: 'Compose agents, connect tools, and deploy powerful AI systems — all in one place.',
 }
 
 /** Global mobile viewport and theme color configuration */
@@ -37,11 +42,13 @@ export const viewport: Viewport = {
  * @param props - Layout props containing React children nodes.
  */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-
   return (
-    <html lang="en" className={`${geist.variable} ${jetbrainsMono.variable} bg-background`}>
+    <html lang="en" className={`${geist.variable} ${jetbrainsMono.variable} ${caveat.variable} bg-background`}>
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          <HealthStatusBanner />
+          {children}
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
