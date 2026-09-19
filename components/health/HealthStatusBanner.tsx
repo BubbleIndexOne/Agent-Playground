@@ -1,18 +1,18 @@
 /**
- * @fileoverview Non-Intrusive Health & Connectivity Status Notification
+ * @fileoverview Reactive Connectivity & Service Status Notification
  *
- * Polls backend /health endpoint every 5-6 seconds to monitor server status.
- * Intelligently detects and differentiates between:
- * - Client network loss (navigator.onLine === false).
- * - Server unreachable or unhealthy status.
- *
- * Renders a discreet top-right floating notification that does not interrupt usability.
+ * Implements modern industry best practice for connectivity monitoring:
+ * - ZERO background polling or interval spam.
+ * - Reactive detection: listens to native browser 'offline' / 'online' events.
+ * - Reactive failure interception: hooks into failed user API calls (network error or 5xx) via requests.ts.
+ * - Automatically disappears when connectivity is restored or manually dismissed.
  */
 
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
-import { WifiOff, Radio, CheckCircle2, X } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { WifiOff, Radio, CheckCircle2, X, RefreshCw } from 'lucide-react'
+import { onNetworkError, onNetworkRestored } from '@/api/requests'
 import { getHealth } from '@/api/health'
 
 type HealthStatus = 'healthy' | 'server_unreachable' | 'offline'
@@ -20,78 +20,83 @@ type HealthStatus = 'healthy' | 'server_unreachable' | 'offline'
 export function HealthStatusBanner() {
   const [status, setStatus] = useState<HealthStatus>('healthy')
   const [isDismissed, setIsDismissed] = useState(false)
-  const [wasUnhealthy, setWasUnhealthy] = useState(false)
   const [showRestoredNotice, setShowRestoredNotice] = useState(false)
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   useEffect(() => {
-    let isMounted = true
-
-    const checkStatus = async () => {
-      // 1. Check browser network connectivity
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        if (isMounted) {
-          setStatus('offline')
-          setWasUnhealthy(true)
-          setIsDismissed(false)
-        }
-        return
-      }
-
-      // 2. Ping backend health check
-      try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 4000)
-
-        const response = await getHealth({ signal: controller.signal })
-        clearTimeout(timeoutId)
-
-        if (!isMounted) return
-
-        if (response && response.status === 'ok') {
-          if (wasUnhealthy) {
-            setShowRestoredNotice(true)
-            setTimeout(() => {
-              if (isMounted) setShowRestoredNotice(false)
-            }, 3000)
-          }
-          setStatus('healthy')
-          setWasUnhealthy(false)
-        } else {
-          setStatus('server_unreachable')
-          setWasUnhealthy(true)
-          setIsDismissed(false)
-        }
-      } catch {
-        if (!isMounted) return
-        setStatus('server_unreachable')
-        setWasUnhealthy(true)
-        setIsDismissed(false)
-      }
+    // 1. Initial check on browser load for native offline state
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setStatus('offline')
+      setIsDismissed(false)
     }
 
-    checkStatus()
+    // 2. Native browser network events (zero network traffic)
+    const handleOnline = () => {
+      setStatus('healthy')
+      setShowRestoredNotice(true)
+      setTimeout(() => setShowRestoredNotice(false), 3000)
+    }
 
-    pollTimerRef.current = setInterval(checkStatus, 5500)
-
-    const handleOnline = () => checkStatus()
     const handleOffline = () => {
       setStatus('offline')
-      setWasUnhealthy(true)
       setIsDismissed(false)
     }
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
+    // 3. Reactive interception of actual API failures (status 0 or 5xx)
+    const unsubscribeError = onNetworkError(() => {
+      // If browser is already offline, keep offline message
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setStatus('offline')
+      } else {
+        setStatus('server_unreachable')
+      }
+      setIsDismissed(false)
+    })
+
+    // 4. Reactive notification when any subsequent API call succeeds
+    const unsubscribeRestored = onNetworkRestored(() => {
+      setStatus('healthy')
+      setShowRestoredNotice(true)
+      setTimeout(() => setShowRestoredNotice(false), 3000)
+    })
+
     return () => {
-      isMounted = false
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      unsubscribeError()
+      unsubscribeRestored()
     }
-  }, [wasUnhealthy])
+  }, [])
 
+  // Manual one-shot retry (only triggered when user explicitly clicks Retry)
+  const handleManualRetry = async () => {
+    if (isRetrying) return
+    setIsRetrying(true)
+    try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setStatus('offline')
+        return
+      }
+
+      const res = await getHealth()
+      if (res?.status === 'ok') {
+        setStatus('healthy')
+        setShowRestoredNotice(true)
+        setTimeout(() => setShowRestoredNotice(false), 3000)
+      } else {
+        setStatus('server_unreachable')
+      }
+    } catch {
+      setStatus('server_unreachable')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
+  // Don't render if healthy and no temporary restored message, or if user dismissed
   if ((status === 'healthy' && !showRestoredNotice) || isDismissed) {
     return null
   }
@@ -102,7 +107,7 @@ export function HealthStatusBanner() {
       className="fixed top-4 right-4 z-50 pointer-events-none flex max-w-[340px] flex-col transition-all duration-300 animate-in fade-in slide-in-from-top-3"
     >
       <div className="pointer-events-auto flex items-start gap-3 rounded-xl border border-border/80 bg-card/95 px-3.5 py-3 shadow-xl backdrop-blur-md">
-        {/* Status icon with pulse */}
+        {/* Status icon */}
         <div className="mt-0.5 shrink-0">
           {status === 'offline' && (
             <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
@@ -127,7 +132,7 @@ export function HealthStatusBanner() {
             <span
               className={`inline-block size-1.5 rounded-full ${
                 status === 'offline'
-                  ? 'bg-amber-400 animate-pulse'
+                  ? 'bg-amber-400'
                   : status === 'server_unreachable'
                   ? 'bg-amber-400 animate-pulse'
                   : 'bg-emerald-400'
@@ -148,6 +153,17 @@ export function HealthStatusBanner() {
               ? 'Unable to reach workspace server. Reconnecting automatically...'
               : 'All workspace services are online.'}
           </p>
+
+          {status === 'server_unreachable' && (
+            <button
+              onClick={handleManualRetry}
+              disabled={isRetrying}
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${isRetrying ? 'animate-spin' : ''}`} />
+              <span>{isRetrying ? 'Checking...' : 'Check connection'}</span>
+            </button>
+          )}
         </div>
 
         {/* Dismiss button */}

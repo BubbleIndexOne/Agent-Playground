@@ -95,6 +95,54 @@ export function handleUnauthorized(): void {
   }
 }
 
+// ─── Reactive Network & Service Health Events ─────────────────────────────────
+
+export interface NetworkErrorInfo {
+  statusCode: number
+  message: string
+}
+
+type NetworkErrorHandler = (error: NetworkErrorInfo) => void
+type NetworkRestoredHandler = () => void
+
+const networkErrorListeners = new Set<NetworkErrorHandler>()
+const networkRestoredListeners = new Set<NetworkRestoredHandler>()
+let hasActiveNetworkFailure = false
+
+export function onNetworkError(handler: NetworkErrorHandler): () => void {
+  networkErrorListeners.add(handler)
+  return () => networkErrorListeners.delete(handler)
+}
+
+export function onNetworkRestored(handler: NetworkRestoredHandler): () => void {
+  networkRestoredListeners.add(handler)
+  return () => networkRestoredListeners.delete(handler)
+}
+
+function notifyNetworkError(statusCode: number, message: string): void {
+  hasActiveNetworkFailure = true
+  networkErrorListeners.forEach((listener) => {
+    try {
+      listener({ statusCode, message })
+    } catch {
+      // Ignore listener errors
+    }
+  })
+}
+
+function notifyNetworkSuccess(): void {
+  if (hasActiveNetworkFailure) {
+    hasActiveNetworkFailure = false
+    networkRestoredListeners.forEach((listener) => {
+      try {
+        listener()
+      } catch {
+        // Ignore listener errors
+      }
+    })
+  }
+}
+
 // ─── Core Request Execution ───────────────────────────────────────────────────
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -155,7 +203,9 @@ export async function makeRequest<T>(endpoint: string, options: RequestOptions =
   try {
     response = await fetch(url, fetchOptions)
   } catch (error) {
-    throw new ApiError(0, error instanceof Error ? error.message : 'Network request failed')
+    const message = error instanceof Error ? error.message : 'Network request failed'
+    notifyNetworkError(0, message)
+    throw new ApiError(0, message)
   }
 
   // Handle 401 Unauthorized
@@ -210,9 +260,13 @@ export async function makeRequest<T>(endpoint: string, options: RequestOptions =
   if (!response.ok) {
     const errorResponse = data as ErrorResponse | null
     const message = errorResponse?.message || response.statusText || 'Request failed'
+    if (response.status >= 500) {
+      notifyNetworkError(response.status, Array.isArray(message) ? message.join(', ') : message)
+    }
     throw new ApiError(response.status, message)
   }
 
+  notifyNetworkSuccess()
   return data as T
 }
 
