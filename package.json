@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "APP_ENV=dev next build",
+    "build:dev": "APP_ENV=dev next build",
+    "build:prod": "APP_ENV=production next build",
+    "deploy:dev": "APP_ENV=dev next build && wrangler deploy --env dev",
+    "deploy:prod": "APP_ENV=production next build && wrangler deploy --env production",
     "start": "next start"
   },
   "dependencies": {

@@ -23,7 +23,7 @@ function resolveWranglerApiBaseUrl() {
     const targetEnv =
       process.env.CF_ENV ||
       process.env.APP_ENV ||
-      (process.env.NODE_ENV === 'production' ? 'production' : 'dev')
+      'dev'
 
     const extractVarFromSection = (sectionName, key) => {
       const escapedSection = sectionName.replace(/\./g, '\\.')
