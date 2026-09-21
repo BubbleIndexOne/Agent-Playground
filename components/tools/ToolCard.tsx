@@ -16,8 +16,20 @@ import {
   Layers,
   Calendar,
 } from 'lucide-react'
-import { Tool } from './types'
+import { Tool, ToolStatus } from './types'
 import { useToolCardMenu } from './hooks/useToolCardMenu'
+
+function getStatusDescription(status: ToolStatus): string {
+  switch (status) {
+    case 'draft': return 'Tool is in development and not yet ready for use.'
+    case 'testing': return 'Tool is currently being tested.'
+    case 'verified': return 'Tool has been verified and is ready for use.'
+    case 'registered': return 'Tool is registered in the MCP directory.'
+    case 'rejected': return 'Tool verification failed or was rejected.'
+    case 'deprecated': return 'Tool is no longer supported or recommended.'
+    default: return 'Unknown status.'
+  }
+}
 
 /**
  * Props for the `ToolCard` component.
@@ -31,8 +43,8 @@ export interface ToolCardProps {
   onDuplicate: (tool: Tool) => void
   /** Callback fired to delete the tool from the workspace */
   onDelete: (id: string) => void
-  /** Optional callback to toggle the tool's published status */
-  onTogglePublish?: (id: string, published: boolean) => void
+  /** Optional callback to change the tool's status */
+  onStatusChange?: (id: string, status: ToolStatus) => void
 }
 
 /**
@@ -45,7 +57,7 @@ export function ToolCard({
   onEdit,
   onDuplicate,
   onDelete,
-  onTogglePublish,
+  onStatusChange,
 }: ToolCardProps) {
 
   const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
@@ -165,36 +177,53 @@ export function ToolCard({
           <span className="capitalize">{tool.serviceConfig?.serviceType || 'Service'}</span>
         )}
 
-        {tool.updatedAt && (
+        {tool.updated_at && (
           <span className="flex items-center gap-1">
             <Calendar className="size-3 text-muted-foreground/70" />
-            {tool.updatedAt}
+            {new Date(tool.updated_at).toLocaleDateString()}
           </span>
         )}
       </div>
 
-      {/* Bottom Publish Bar */}
+      {/* Bottom Publish Bar / Status Bar */}
       <div
         className="mt-4 pt-3 border-t border-border flex items-center justify-between"
         onClick={e => e.stopPropagation()}
       >
-        <span className="text-[11px] font-medium text-muted-foreground">
-          {tool.published ? 'Published' : 'Draft'}
-        </span>
-        <button
-          type="button"
-          aria-label={tool.published ? 'Unpublish tool' : 'Publish tool'}
-          onClick={() => onTogglePublish?.(tool.id, !tool.published)}
-          className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-            tool.published ? 'bg-primary' : 'bg-muted'
-          }`}
-        >
-          <span
-            className={`inline-block size-3 transform rounded-full bg-white transition-transform ${
-              tool.published ? 'translate-x-3.5' : 'translate-x-0.5'
-            }`}
-          />
-        </button>
+        <div className="group/tooltip relative">
+          <span className="text-[11px] font-medium capitalize cursor-help border-b border-dotted border-muted-foreground/50 transition-colors hover:text-foreground">
+            <span className={`inline-block size-1.5 rounded-full mr-1.5 ${
+              tool.status === 'verified' || tool.status === 'registered' ? 'bg-emerald-500' :
+              tool.status === 'draft' ? 'bg-muted-foreground' :
+              tool.status === 'rejected' || tool.status === 'deprecated' ? 'bg-destructive' :
+              'bg-amber-500'
+            }`} />
+            {tool.status || 'draft'}
+          </span>
+          <div className="pointer-events-none absolute bottom-full left-0 mb-2 w-48 opacity-0 transition-opacity group-hover/tooltip:opacity-100 z-10 rounded-md bg-popover text-popover-foreground text-[10px] p-2 shadow-md border border-border">
+            {getStatusDescription(tool.status || 'draft')}
+          </div>
+        </div>
+        
+        {/* Simple action to move from draft to verified for testing Phase 0 mocks */}
+        {tool.status === 'draft' && (
+          <button
+            type="button"
+            onClick={() => onStatusChange?.(tool.id, 'verified')}
+            className="text-[10px] font-medium text-primary hover:underline"
+          >
+            Mark Verified
+          </button>
+        )}
+        {(tool.status === 'verified' || tool.status === 'registered') && (
+          <button
+            type="button"
+            onClick={() => onStatusChange?.(tool.id, 'draft')}
+            className="text-[10px] font-medium text-muted-foreground hover:underline"
+          >
+            Revert to Draft
+          </button>
+        )}
       </div>
     </div>
   )

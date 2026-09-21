@@ -14,8 +14,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { PanelLeft, Sparkles, Activity, Wrench } from 'lucide-react'
-import { Tool, ToolFilter } from './types'
+import { PanelLeft, Sparkles, Activity, Wrench, Loader2, AlertCircle } from 'lucide-react'
+import { Tool, ToolFilter, ToolStatus } from './types'
 import { ToolsHeader } from './ToolsHeader'
 import { ToolCard } from './ToolCard'
 import { useTools } from './ToolsContext'
@@ -25,7 +25,7 @@ import { useTools } from './ToolsContext'
  */
 export function ToolsScreen() {
   const router = useRouter()
-  const { tools, deleteTool, duplicateTool, togglePublishTool } = useTools()
+  const { tools, isLoading, error, deleteTool, duplicateTool, updateToolStatus } = useTools()
 
   const [activeTab, setActiveTab] = useState<'my-tools' | 'marketplace'>('my-tools')
   const [searchQuery, setSearchQuery] = useState('')
@@ -38,7 +38,7 @@ export function ToolsScreen() {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         const matchesName = tool.name.toLowerCase().includes(q)
-        const matchesDesc = tool.description.toLowerCase().includes(q)
+        const matchesDesc = (tool.description || '').toLowerCase().includes(q)
         const matchesParam = tool.parameters?.some(
           p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
         )
@@ -48,8 +48,8 @@ export function ToolsScreen() {
       // 2. Status / Category Filter
       if (activeFilter === 'client') return tool.type === 'client'
       if (activeFilter === 'mcp') return tool.type === 'mcp'
-      if (activeFilter === 'published') return tool.published === true
-      if (activeFilter === 'draft') return !tool.published
+      if (activeFilter === 'verified') return tool.status === 'verified' || tool.status === 'registered'
+      if (activeFilter === 'draft') return tool.status === 'draft' || tool.status === 'testing'
 
       return true
     })
@@ -72,8 +72,8 @@ export function ToolsScreen() {
     deleteTool(id)
   }
 
-  const handleTogglePublish = (id: string, published: boolean) => {
-    togglePublishTool(id, published)
+  const handleStatusChange = (id: string, status: ToolStatus) => {
+    updateToolStatus(id, status)
   }
 
   return (
@@ -107,7 +107,20 @@ export function ToolsScreen() {
 
           {activeTab === 'my-tools' && (
             <div className="flex-1 overflow-y-auto min-h-0">
-              {filteredTools.length > 0 ? (
+              {isLoading ? (
+                <div className="py-24 flex flex-col items-center justify-center text-center">
+                  <Loader2 className="size-8 text-primary animate-spin mb-4" />
+                  <p className="text-[14px] font-medium text-foreground">Loading tools...</p>
+                </div>
+              ) : error ? (
+                <div className="py-24 flex flex-col items-center justify-center text-center">
+                  <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 mb-5">
+                    <AlertCircle className="size-5 text-destructive" />
+                  </div>
+                  <h3 className="text-[16px] font-semibold text-foreground">Failed to load tools</h3>
+                  <p className="mt-2 text-[13px] text-muted-foreground max-w-sm">{error}</p>
+                </div>
+              ) : filteredTools.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredTools.map(tool => (
                     <ToolCard
@@ -116,7 +129,7 @@ export function ToolsScreen() {
                       onEdit={handleEditTool}
                       onDuplicate={handleDuplicateTool}
                       onDelete={handleDeleteTool}
-                      onTogglePublish={handleTogglePublish}
+                      onStatusChange={handleStatusChange}
                     />
                   ))}
                 </div>

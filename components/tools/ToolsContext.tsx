@@ -1,71 +1,78 @@
 /**
- * @fileoverview Centralized Tools Context & Persistent State Provider
+ * @fileoverview Centralized Tools Context & API State Provider
  *
- * Manages the workspace tools state across route transitions (/tools, /tools/new, /tools/edit),
- * synchronizing state with browser `localStorage` and falling back to INITIAL_TOOLS.
+ * Manages the workspace tools state, fetching directly from the backend API.
  */
 
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { Tool } from './types'
-import { INITIAL_TOOLS } from './constants'
-
-const TOOLS_STORAGE_KEY = 'workspace_tools'
+import { Tool, ToolStatus } from './types'
+import { apiClient } from '../../api/requests'
+import { jsonSchemaToParameters } from './schemaUtils'
 
 export interface ToolsContextValue {
   /** All tools available in the workspace */
   tools: Tool[]
-  /** Saves a new tool or updates an existing one */
+  /** Loading state for initial fetch */
+  isLoading: boolean
+  /** Error message if fetch fails */
+  error: string | null
+  /** Refreshes the tool list from the server */
+  refreshTools: () => Promise<void>
+  /** Saves a new tool or updates an existing one (Mocked until Phase 1) */
   saveTool: (tool: Tool) => void
-  /** Deletes a tool by its ID */
+  /** Deletes a tool by its ID (Mocked until Phase 2) */
   deleteTool: (id: string) => void
-  /** Clones an existing tool with a new ID */
+  /** Clones an existing tool with a new ID (Mocked until Phase 2) */
   duplicateTool: (tool: Tool) => Tool
-  /** Toggles published status on a tool */
-  togglePublishTool: (id: string, published: boolean) => void
-  /** Retrieves a tool by ID */
+  /** Updates the lifecycle status of a tool (Mocked until Phase 1) */
+  updateToolStatus: (id: string, status: ToolStatus) => void
+  /** Retrieves a tool by ID from local state */
   getTool: (id: string) => Tool | undefined
 }
 
 const ToolsContext = createContext<ToolsContextValue | undefined>(undefined)
 
 /**
- * Provider component that wraps tools workspace pages with persistent state.
+ * Provider component that wraps tools workspace pages with persistent API state.
  */
 export function ToolsProvider({ children }: { children: ReactNode }) {
-  const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [tools, setTools] = useState<Tool[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(TOOLS_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setTools(parsed)
-          }
+  const refreshTools = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const fetchedTools = await apiClient.get<Tool[]>('/tools')
+      
+      // Map API responses to UI requirements (e.g. expanding parameters)
+      const mappedTools = fetchedTools.map(tool => {
+        return {
+          ...tool,
+          parameters: tool.current_version?.schema_json 
+            ? jsonSchemaToParameters(tool.current_version.schema_json)
+            : []
         }
-      } catch (err) {
-        console.error('Failed to load workspace tools from localStorage:', err)
-      } finally {
-        setIsInitialized(true)
-      }
+      })
+
+      setTools(mappedTools)
+    } catch (err: any) {
+      console.error('Failed to fetch tools:', err)
+      setError(err.message || 'Failed to fetch tools')
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
-  // Persist to localStorage whenever tools update after initial hydration
+  // Initial load
   useEffect(() => {
-    if (isInitialized && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(TOOLS_STORAGE_KEY, JSON.stringify(tools))
-      } catch (err) {
-        console.error('Failed to persist workspace tools to localStorage:', err)
-      }
-    }
-  }, [tools, isInitialized])
+    refreshTools()
+  }, [refreshTools])
+
+  // --- MOCK IMPLEMENTATIONS (To be fully implemented in Phase 1 & 2) ---
 
   const saveTool = useCallback((toolToSave: Tool) => {
     setTools(prev => {
@@ -86,15 +93,16 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
       ...tool,
       id: Math.random().toString(36).substring(2, 9),
       name: `${tool.name} (Copy)`,
-      published: false,
-      updatedAt: 'Just now',
+      status: 'draft',
+      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     }
     setTools(prev => [duplicated, ...prev])
     return duplicated
   }, [])
 
-  const togglePublishTool = useCallback((id: string, published: boolean) => {
-    setTools(prev => prev.map(t => (t.id === id ? { ...t, published } : t)))
+  const updateToolStatus = useCallback((id: string, status: ToolStatus) => {
+    setTools(prev => prev.map(t => (t.id === id ? { ...t, status } : t)))
   }, [])
 
   const getTool = useCallback((id: string) => {
@@ -103,10 +111,13 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
 
   const value: ToolsContextValue = {
     tools,
+    isLoading,
+    error,
+    refreshTools,
     saveTool,
     deleteTool,
     duplicateTool,
-    togglePublishTool,
+    updateToolStatus,
     getTool,
   }
 
