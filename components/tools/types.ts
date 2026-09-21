@@ -51,29 +51,64 @@ export interface ToolServiceConfig {
 }
 
 /**
+ * Defines the status lifecycle of a tool on the backend.
+ */
+export type ToolStatus = 'draft' | 'testing' | 'verified' | 'registered' | 'rejected' | 'deprecated'
+
+/**
+ * Definition of a specific version of a tool (code, schema, capabilities).
+ */
+export interface ToolVersionResponse {
+  id: string
+  tool_id: string
+  version_number: number
+  code: string | null
+  schema_json: Record<string, any>
+  capabilities_json: string[]
+  code_hash: string | null
+  test_results_json: Record<string, any> | null
+  created_at: string
+}
+
+/**
  * Complete definition of a workspace tool (client function or connected service).
+ * This maps to the backend ToolResponse object.
  */
 export interface Tool {
   /** Unique tool identifier */
   id: string
+  /** Owner ID of the tool */
+  owner_id?: string
   /** Human-readable tool title */
   name: string
   /** Comprehensive tool documentation explaining when and how the AI should invoke it */
-  description: string
+  description: string | null
   /** Execution type: browser JavaScript client function or connected MCP service */
   type: 'client' | 'mcp'
-  /** Whether the tool is marked as published and ready for playground integration */
-  published?: boolean
+  /** Current lifecycle status of the tool */
+  status: ToolStatus
+  /** Whether the tool is publicly available */
+  is_public: boolean
+  /** Whether the tool can be executed client-side */
+  allow_client_execution: boolean
+  /** Connector type for connected external services */
+  connector_type: string | null
+  /** Current version ID */
+  current_version_id: string | null
+  /** Current version details (code, schema, etc) */
+  current_version: ToolVersionResponse | null
+  /** Is the tool archived */
+  is_archived?: boolean
+  /** Timestamp of creation */
+  created_at: string
+  /** Timestamp of the last modification */
+  updated_at: string
+
+  // --- Legacy fields (kept for UI compatibility, these are mapped in context) ---
   /** Array of declared input parameters for client tools */
   parameters?: ToolParameter[]
-  /** Executable JavaScript function source code for client tools */
-  code?: string
   /** Connection details for connected external services */
   serviceConfig?: ToolServiceConfig
-  /** Sandbox permission gates granted to the tool */
-  capabilities?: ToolCapabilities
-  /** Human-friendly timestamp of the last modification */
-  updatedAt?: string
 }
 
 /**
