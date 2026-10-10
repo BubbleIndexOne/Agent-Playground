@@ -87,6 +87,8 @@ function BasicModelSettings({
   setModelId,
   setApiKey,
   onClose,
+  presets,
+  onApplyPreset,
 }: {
   providers: Provider[]
   providerId: string
@@ -186,7 +188,7 @@ function BasicModelSettings({
                     if (selected) {
                       setDraftProvider(selected.provider)
                       setDraftModel(selected.model_id || '')
-                      onApplyPreset(selected)
+                      onApplyPreset?.(selected)
                     }
                   }}
                   className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -315,6 +317,8 @@ function AdvancedModelSettings({
   setApiKey,
   setConfigs,
   onClose,
+  presets,
+  onApplyPreset,
 }: {
   providers: Provider[]
   providerId: string
@@ -453,18 +457,18 @@ function AdvancedModelSettings({
                         if (selected) {
                           setDraftProvider(selected.provider)
                           setDraftModel(selected.model_id || '')
-                          onApplyPreset(selected)
+                          onApplyPreset?.(selected)
                           // Optionally update draftConfigs here so the UI reflects it immediately
                           setDraftConfigs(prev => ({
                             ...prev,
-                            temperature: selected.params.temperature,
-                            topP: selected.params.topP,
-                            topK: selected.params.topK,
-                            maxOutputTokens: selected.params.maxOutputTokens,
-                            presencePenalty: selected.params.presencePenalty,
-                            frequencyPenalty: selected.params.frequencyPenalty,
-                            seed: selected.params.seed,
-                            stopSequences: selected.params.stopSequences,
+                            temperature: selected.params?.temperature,
+                            topP: selected.params?.topP,
+                            topK: selected.params?.topK,
+                            maxOutputTokens: selected.params?.maxOutputTokens,
+                            presencePenalty: selected.params?.presencePenalty,
+                            frequencyPenalty: selected.params?.frequencyPenalty,
+                            seed: selected.params?.seed,
+                            stopSequences: selected.params?.stopSequences,
                           }))
                         }
                       }}
@@ -784,14 +788,14 @@ export function PlaygroundScreen() {
   const handleApplyPreset = (preset: ModelPresetItem) => {
     // Apply parameters to the playground state
     const newConfigs = { ...configs }
-    if (preset.params.temperature !== undefined) newConfigs.temperature = preset.params.temperature
-    if (preset.params.topP !== undefined) newConfigs.topP = preset.params.topP
-    if (preset.params.topK !== undefined) newConfigs.topK = preset.params.topK
-    if (preset.params.maxOutputTokens !== undefined) newConfigs.maxOutputTokens = preset.params.maxOutputTokens
-    if (preset.params.presencePenalty !== undefined) newConfigs.presencePenalty = preset.params.presencePenalty
-    if (preset.params.frequencyPenalty !== undefined) newConfigs.frequencyPenalty = preset.params.frequencyPenalty
-    if (preset.params.seed !== undefined) newConfigs.seed = preset.params.seed
-    if (preset.params.stopSequences !== undefined) newConfigs.stopSequences = preset.params.stopSequences
+    if (preset.params?.temperature !== undefined) newConfigs.temperature = preset.params.temperature
+    if (preset.params?.topP !== undefined) newConfigs.topP = preset.params.topP
+    if (preset.params?.topK !== undefined) newConfigs.topK = preset.params.topK
+    if (preset.params?.maxOutputTokens !== undefined) newConfigs.maxOutputTokens = preset.params.maxOutputTokens
+    if (preset.params?.presencePenalty !== undefined) newConfigs.presencePenalty = preset.params.presencePenalty
+    if (preset.params?.frequencyPenalty !== undefined) newConfigs.frequencyPenalty = preset.params.frequencyPenalty
+    if (preset.params?.seed !== undefined) newConfigs.seed = preset.params.seed
+    if (preset.params?.stopSequences !== undefined) newConfigs.stopSequences = preset.params.stopSequences
     
     setConfigs(newConfigs)
     saveModelConfigs(newConfigs)
