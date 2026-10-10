@@ -11,6 +11,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Geist, JetBrains_Mono, Caveat } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/context/AuthContext'
+import { ModelPresetsProvider } from '@/components/model-presets/ModelPresetsContext'
 import { HealthStatusBanner } from '@/components/health/HealthStatusBanner'
 import './globals.css'
 
@@ -46,8 +47,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${geist.variable} ${jetbrainsMono.variable} ${caveat.variable} bg-background`}>
       <body className="antialiased">
         <AuthProvider>
-          <HealthStatusBanner />
-          {children}
+          <ModelPresetsProvider>
+            <HealthStatusBanner />
+            {children}
+          </ModelPresetsProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

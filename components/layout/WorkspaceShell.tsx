@@ -34,6 +34,7 @@ export const NAVIGATION_ITEMS = [
   { label: 'Playground', description: 'Experiment with models', icon: Play, href: '/home' },
   { label: 'Tools', description: 'Reusable capabilities', icon: Wrench, href: '/tools' },
   { label: 'Agents', description: 'Automated workflows', icon: Bot, href: '/agents' },
+  { label: 'Models', description: 'Configure LLM presets', icon: Settings2, href: '/models' },
   { label: 'History', description: 'Your recent runs', icon: Clock3, href: '/history' },
 ]
 
