@@ -5,10 +5,12 @@ import { Plus, Search, Settings2, SlidersHorizontal, Trash2, Edit3, Loader2, Ale
 import { useModelPresets } from './ModelPresetsContext'
 import { ModelPresetItem } from './types'
 import { WorkspaceShell } from '../layout/WorkspaceShell'
+import { ModelPresetEditor } from './ModelPresetEditor'
 
 export function ModelPresetsScreen() {
   const { presets, isLoading, error, deletePreset } = useModelPresets()
   const [searchQuery, setSearchQuery] = useState('')
+  const [editorState, setEditorState] = useState<{ isOpen: boolean; preset?: ModelPresetItem }>({ isOpen: false })
 
   const filteredPresets = useMemo(() => {
     return presets.filter(preset => {
@@ -26,6 +28,10 @@ export function ModelPresetsScreen() {
       await deletePreset(id)
     }
   }
+
+  const openNewEditor = () => setEditorState({ isOpen: true })
+  const openEditEditor = (preset: ModelPresetItem) => setEditorState({ isOpen: true, preset })
+  const closeEditor = () => setEditorState({ isOpen: false })
 
   return (
     <WorkspaceShell>
@@ -56,6 +62,7 @@ export function ModelPresetsScreen() {
               </div>
               <button
                 type="button"
+                onClick={openNewEditor}
                 className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90"
               >
                 <Plus className="size-3.5" />
@@ -109,7 +116,10 @@ export function ModelPresetsScreen() {
                       </div>
                       
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+                        <button 
+                          onClick={() => openEditEditor(preset)}
+                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
                           <Edit3 className="size-3.5" />
                         </button>
                         <button 
@@ -163,6 +173,13 @@ export function ModelPresetsScreen() {
           </div>
         </section>
       </div>
+
+      {editorState.isOpen && (
+        <ModelPresetEditor 
+          preset={editorState.preset} 
+          onClose={closeEditor} 
+        />
+      )}
     </WorkspaceShell>
   )
 }
