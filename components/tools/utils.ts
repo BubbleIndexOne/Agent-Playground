@@ -6,12 +6,12 @@ import { ToolStatus } from './types'
 
 export function getStatusDescription(status: ToolStatus): string {
   switch (status) {
-    case 'draft': return 'Tool is in development and not yet ready for use.'
-    case 'testing': return 'Tool is currently being tested.'
-    case 'verified': return 'Tool has been verified and is ready for use.'
-    case 'registered': return 'Tool is registered in the MCP directory.'
-    case 'rejected': return 'Tool verification failed or was rejected.'
-    case 'deprecated': return 'Tool is no longer supported or recommended.'
+    case 'draft': return 'Tool is in draft status. Run sandbox audit or request publish to verify.'
+    case 'testing': return 'Tool is undergoing automated test evaluation in the sandbox.'
+    case 'verified': return 'Verified server-side and approved for workspace & public publication.'
+    case 'registered': return 'Successfully audited and registered in Cloudflare sandbox.'
+    case 'rejected': return 'Audit rejected (schema mismatch, runtime error, or capability violation).'
+    case 'deprecated': return 'Tool version has been deprecated.'
     default: return 'Unknown status.'
   }
 }

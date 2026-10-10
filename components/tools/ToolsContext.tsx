@@ -97,13 +97,13 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
           toolToSave.id.length > 20
 
         if (isExisting) {
-          // 1. Update Tool metadata
+          // 1. Update Tool metadata (omit 'verified' to avoid 403 since verified transition is strictly server-side)
           await toolsApi.updateTool(toolToSave.id, {
             name: toolToSave.name,
             description: toolToSave.description,
             is_public: toolToSave.is_public,
             allow_client_execution: toolToSave.allow_client_execution,
-            status: toolToSave.status,
+            ...(toolToSave.status && toolToSave.status !== 'verified' ? { status: toolToSave.status } : {}),
           })
 
           // 2. Create new atomic version if code/parameters/capabilities provided

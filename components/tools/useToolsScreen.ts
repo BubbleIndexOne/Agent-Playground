@@ -9,7 +9,7 @@ import { useTools } from './ToolsContext'
 
 export function useToolsScreen() {
   const router = useRouter()
-  const { tools, isLoading, error, deleteTool, duplicateTool, updateToolStatus } = useTools()
+  const { tools, isLoading, error, deleteTool, duplicateTool } = useTools()
 
   const [activeTab, setActiveTab] = useState<'my-tools' | 'marketplace'>('my-tools')
   const [searchQuery, setSearchQuery] = useState('')
@@ -60,14 +60,6 @@ export function useToolsScreen() {
     }
   }
 
-  const handleStatusChange = async (id: string, status: ToolStatus) => {
-    try {
-      await updateToolStatus(id, status)
-    } catch (err) {
-      console.error('Failed to update tool status:', err)
-    }
-  }
-
   return {
     tools,
     isLoading,
@@ -80,6 +72,5 @@ export function useToolsScreen() {
     handleEditTool,
     handleDuplicateTool,
     handleDeleteTool,
-    handleStatusChange,
   }
 }

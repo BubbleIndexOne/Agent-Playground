@@ -15,6 +15,7 @@ import {
   Sparkles,
   Layers,
   Calendar,
+  CheckCircle2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Tool, ToolStatus } from './types'
@@ -26,7 +27,6 @@ export interface ToolCardProps {
   onEdit: (tool: Tool) => void
   onDuplicate: (tool: Tool) => void
   onDelete: (id: string) => void
-  onStatusChange?: (id: string, status: ToolStatus) => void
 }
 
 export function ToolCard({
@@ -34,7 +34,6 @@ export function ToolCard({
   onEdit,
   onDuplicate,
   onDelete,
-  onStatusChange,
 }: ToolCardProps) {
   const router = useRouter()
   const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
@@ -196,24 +195,24 @@ export function ToolCard({
           </div>
         </div>
         
-        {/* Simple action to move from draft to verified for testing Phase 0 mocks */}
-        {tool.status === 'draft' && (
+        {/* Server-side verification indicator / Audit action */}
+        {tool.status === 'registered' || tool.status === 'verified' ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400">
+            <CheckCircle2 className="size-3" />
+            Verified
+          </span>
+        ) : tool.status === 'draft' ? (
           <button
             type="button"
-            onClick={() => onStatusChange?.(tool.id, 'verified')}
-            className="text-[10px] font-medium text-primary hover:underline"
+            onClick={() => onEdit(tool)}
+            className="text-[10px] font-medium text-muted-foreground hover:text-primary hover:underline transition-colors"
           >
-            Mark Verified
+            Run Sandbox Audit &rarr;
           </button>
-        )}
-        {(tool.status === 'verified' || tool.status === 'registered') && (
-          <button
-            type="button"
-            onClick={() => onStatusChange?.(tool.id, 'draft')}
-            className="text-[10px] font-medium text-muted-foreground hover:underline"
-          >
-            Revert to Draft
-          </button>
+        ) : (
+          <span className="text-[10px] font-mono text-muted-foreground capitalize">
+            {tool.status}
+          </span>
         )}
       </div>
     </div>

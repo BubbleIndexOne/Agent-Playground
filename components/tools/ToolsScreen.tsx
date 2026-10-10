@@ -26,7 +26,6 @@ export function ToolsScreen() {
     handleEditTool,
     handleDuplicateTool,
     handleDeleteTool,
-    handleStatusChange,
   } = useToolsScreen()
 
   return (
@@ -82,7 +81,6 @@ export function ToolsScreen() {
                       onEdit={handleEditTool}
                       onDuplicate={handleDuplicateTool}
                       onDelete={handleDeleteTool}
-                      onStatusChange={handleStatusChange}
                     />
                   ))}
                 </div>
