@@ -76,243 +76,9 @@ function StatusPill({
 }
 
 /**
- * Modal dialog for configuring the active model provider, model selection, and API key.
+ * Unified slide-over drawer for model configuration (Provider, API Key, and Advanced Params).
  */
-function BasicModelSettings({
-  providers,
-  providerId,
-  modelId,
-  apiKey,
-  setProviderId,
-  setModelId,
-  setApiKey,
-  onClose,
-  presets,
-  onApplyPreset,
-}: {
-  providers: Provider[]
-  providerId: string
-  modelId: string
-  apiKey: string
-  setProviderId: (v: string) => void
-  setModelId: (v: string) => void
-  setApiKey: (v: string) => void
-  onClose: () => void
-  presets?: ModelPresetItem[]
-  onApplyPreset?: (preset: ModelPresetItem) => void
-}) {
-  const [draftProvider, setDraftProvider] = useState(providerId)
-  const [draftModel, setDraftModel] = useState(modelId)
-  const [draftKey, setDraftKey] = useState(apiKey)
-  const [visible, setVisible] = useState(false)
-
-  const save = () => {
-    setProviderId(draftProvider)
-    setModelId(draftModel)
-    setApiKey(draftKey.trim())
-    saveKey(draftKey.trim())
-    onClose()
-  }
-
-  const clear = () => {
-    setDraftKey('')
-    setApiKey('')
-    clearKey()
-  }
-
-  const currentProvider = providers.find(p => p.id === draftProvider) || providers[0]
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="model-settings-title"
-      onMouseDown={e => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-2xl shadow-black/30">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[11px] font-medium text-primary">Workspace configuration</p>
-            <h2 id="model-settings-title" className="mt-1 text-[19px] font-semibold tracking-[-0.025em]">
-              Model &amp; API Key
-            </h2>
-          </div>
-          <button
-            aria-label="Close model settings"
-            onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <form
-          onSubmit={e => {
-            e.preventDefault()
-            save()
-          }}
-          autoComplete="off"
-          className="mt-7 flex flex-col gap-5"
-        >
-          <input
-            type="text"
-            name="prevent_autofill"
-            className="hidden"
-            tabIndex={-1}
-            aria-hidden="true"
-            autoComplete="off"
-          />
-          <input
-            type="password"
-            name="prevent_autofill_pwd"
-            className="hidden"
-            tabIndex={-1}
-            aria-hidden="true"
-            autoComplete="off"
-          />
-
-          {presets && onApplyPreset && (
-            <div className="flex flex-col gap-2 border-b border-border pb-4">
-              <label htmlFor="preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
-                <Sparkles className="size-3.5" />
-                Apply a Model Preset
-              </label>
-              <div className="relative">
-                <select
-                  id="preset"
-                  disabled={presets.length === 0}
-                  onChange={e => {
-                    const selected = presets.find(p => p.id === e.target.value)
-                    if (selected) {
-                      setDraftProvider(selected.provider)
-                      setDraftModel(selected.model_id || '')
-                      onApplyPreset?.(selected)
-                    }
-                  }}
-                  className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                >
-                  <option value="">{presets.length === 0 ? 'No presets available' : '-- Choose a preset --'}</option>
-                  {presets.filter(p => !p.is_archived).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-              </div>
-              {presets.length === 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  Create a preset in the Models tab to quickly apply settings.
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="provider" className="text-[12px] font-medium">
-              Model provider
-            </label>
-            <div className="relative">
-              <select
-                id="provider"
-                value={draftProvider}
-                onChange={e => {
-                  setDraftProvider(e.target.value)
-                  const p = providers.find(p => p.id === e.target.value)
-                  if (p) setDraftModel(p.models[0].id)
-                }}
-                className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                {providers.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="model" className="text-[12px] font-medium">
-              Model
-            </label>
-            <div className="relative">
-              <select
-                id="model"
-                value={draftModel}
-                onChange={e => setDraftModel(e.target.value)}
-                className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                {currentProvider.models.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="settings-key" className="text-[12px] font-medium">
-              API key
-            </label>
-            <div className="relative">
-              <LockKeyhole className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-              <input
-                id="settings-key"
-                name="model_api_secret_key"
-                type={visible ? 'text' : 'password'}
-                value={draftKey}
-                onChange={e => setDraftKey(e.target.value)}
-                placeholder="sk-ant-..."
-                autoComplete="new-password"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                className="h-10 w-full rounded-lg border border-border bg-background px-10 pr-10 font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              <button
-                type="button"
-                aria-label={visible ? 'Hide API key' : 'Show API key'}
-                onClick={() => setVisible(!visible)}
-                className="absolute right-2 top-2 flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-              >
-                {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-            <p className="text-[11px] leading-5 text-muted-foreground">
-              Stored only for this browser session — cleared when you close this tab. Never sent anywhere except
-              directly to the model provider.
-            </p>
-          </div>
-
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={clear}
-              className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive"
-            >
-              Clear key
-            </button>
-            <button
-              type="submit"
-              className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              Save
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Slide-over drawer for advanced hyper-parameter tuning.
- */
-function AdvancedModelSettings({
+function ModelConfigurationDrawer({
   providers,
   providerId,
   modelId,
@@ -344,7 +110,7 @@ function AdvancedModelSettings({
   const [draftKey, setDraftKey] = useState(apiKey)
   const [draftConfigs, setDraftConfigs] = useState<ModelConfig>(configs)
   const [visible, setVisible] = useState(false)
-  const [activeTab, setActiveTab] = useState<'config' | 'model'>('config')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const save = () => {
     setProviderId(draftProvider)
@@ -368,10 +134,6 @@ function AdvancedModelSettings({
     setDraftConfigs(prev => ({ ...prev, [key]: value }))
   }
 
-  const resetConfigs = () => {
-    setDraftConfigs({})
-  }
-
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm"
@@ -382,16 +144,18 @@ function AdvancedModelSettings({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-[400px] h-full bg-card border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+      <div className="w-full max-w-[420px] h-full bg-card border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+        
+        {/* HEADER */}
+        <div className="flex items-center justify-between p-6 border-b border-border bg-accent/10">
           <div>
             <h2 id="model-settings-title" className="text-[19px] font-semibold tracking-[-0.025em]">
-              Tune Model
+              Model Configuration
             </h2>
-            <p className="text-[11px] text-muted-foreground mt-1">Configure workspace and model parameters</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Configure your workspace and model parameters.</p>
           </div>
           <button
-            aria-label="Close model settings"
+            aria-label="Close settings"
             onClick={onClose}
             className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
@@ -399,387 +163,304 @@ function AdvancedModelSettings({
           </button>
         </div>
 
-        {presets && onApplyPreset && (
-          <div className="flex flex-col gap-2 border-b border-border p-6 pb-6 bg-accent/10">
-            <label htmlFor="adv-preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
-              <Sparkles className="size-3.5" />
-              Apply a Model Preset
-            </label>
-            <div className="relative">
-              <select
-                id="adv-preset"
-                disabled={presets.length === 0}
-                onChange={e => {
-                  const selected = presets.find(p => p.id === e.target.value)
-                  if (selected) {
-                    setDraftProvider(selected.provider)
-                    setDraftModel(selected.model_id || '')
-                    onApplyPreset?.(selected)
-                    setDraftConfigs(prev => ({
-                      ...prev,
-                      temperature: selected.params?.temperature,
-                      topP: selected.params?.topP,
-                      topK: selected.params?.topK,
-                      maxOutputTokens: selected.params?.maxOutputTokens,
-                      presencePenalty: selected.params?.presencePenalty,
-                      frequencyPenalty: selected.params?.frequencyPenalty,
-                      seed: selected.params?.seed,
-                      stopSequences: selected.params?.stopSequences,
-                    }))
-                  }
-                }}
-                className="h-10 w-full appearance-none rounded-lg border border-border bg-card px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-              >
-                <option value="">{presets.length === 0 ? 'No presets available' : '-- Choose a preset --'}</option>
-                {presets.filter(p => !p.is_archived).map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+        {/* SCROLLABLE CONTENT */}
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+          
+          {/* PRESETS SECTION */}
+          {presets && onApplyPreset && (
+            <div className="flex flex-col gap-2 p-5 border border-primary/20 bg-primary/[0.03] rounded-xl">
+              <label htmlFor="preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
+                <Sparkles className="size-3.5" />
+                Apply a Model Preset
+              </label>
+              <div className="relative">
+                <select
+                  id="preset"
+                  disabled={presets.length === 0}
+                  onChange={e => {
+                    const selected = presets.find(p => p.id === e.target.value)
+                    if (selected) {
+                      setDraftProvider(selected.provider)
+                      setDraftModel(selected.model_id || '')
+                      onApplyPreset?.(selected)
+                      setDraftConfigs(prev => ({
+                        ...prev,
+                        temperature: selected.params?.temperature,
+                        topP: selected.params?.topP,
+                        topK: selected.params?.topK,
+                        maxOutputTokens: selected.params?.maxOutputTokens,
+                        presencePenalty: selected.params?.presencePenalty,
+                        frequencyPenalty: selected.params?.frequencyPenalty,
+                        seed: selected.params?.seed,
+                        stopSequences: selected.params?.stopSequences,
+                      }))
+                    }
+                  }}
+                  className="h-10 w-full appearance-none rounded-lg border border-border bg-card px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                >
+                  <option value="">{presets.length === 0 ? 'No presets available' : '-- Choose a preset --'}</option>
+                  {presets.filter(p => !p.is_archived).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+              </div>
+              {presets.length === 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Create a preset in the Models tab to quickly apply settings.
+                </p>
+              )}
             </div>
-            {presets.length === 0 && (
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Create a preset in the Models tab to quickly apply settings.
-              </p>
+          )}
+
+          {/* PROVIDER & MODEL SECTION */}
+          <div className="flex flex-col gap-5 border border-border p-5 rounded-xl bg-card shadow-sm">
+            <input type="text" name="prevent_autofill_adv" className="hidden" tabIndex={-1} aria-hidden="true" autoComplete="off" />
+            <input type="password" name="prevent_autofill_adv_pwd" className="hidden" tabIndex={-1} aria-hidden="true" autoComplete="off" />
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="adv-provider" className="text-[12px] font-medium">Model provider</label>
+              <div className="relative">
+                <select
+                  id="adv-provider"
+                  value={draftProvider}
+                  onChange={e => {
+                    setDraftProvider(e.target.value)
+                    const p = providers.find(p => p.id === e.target.value)
+                    if (p) setDraftModel(p.models[0].id)
+                  }}
+                  className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  {providers.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="adv-model" className="text-[12px] font-medium">Model</label>
+              <div className="relative">
+                <select
+                  id="adv-model"
+                  value={draftModel}
+                  onChange={e => setDraftModel(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  {currentProvider.models.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="adv-settings-key" className="text-[12px] font-medium">API key</label>
+              <div className="relative">
+                <LockKeyhole className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+                <input
+                  id="adv-settings-key"
+                  name="model_api_secret_key"
+                  type={visible ? 'text' : 'password'}
+                  value={draftKey}
+                  onChange={e => setDraftKey(e.target.value)}
+                  placeholder="sk-ant-..."
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-10 pr-10 font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  type="button"
+                  aria-label={visible ? 'Hide API key' : 'Show API key'}
+                  onClick={() => setVisible(!visible)}
+                  className="absolute right-2 top-2 flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                >
+                  {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              <p className="text-[11px] leading-5 text-muted-foreground">Stored only for this browser session.</p>
+            </div>
+          </div>
+
+          {/* ADVANCED PARAMS */}
+          <div className="flex flex-col border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+            <button 
+              onClick={() => setShowAdvanced(!showAdvanced)} 
+              className="flex items-center justify-between p-4 bg-accent/5 hover:bg-accent/30 transition-colors"
+            >
+              <div className="flex flex-col items-start gap-0.5">
+                <span className="text-[13px] font-medium">Advanced Parameters</span>
+                <span className="text-[11px] text-muted-foreground">Temperature, Top P, Penalties, etc.</span>
+              </div>
+              <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showAdvanced && (
+              <div className="p-5 flex flex-col gap-8 border-t border-border bg-card animate-in slide-in-from-top-2 fade-in duration-200">
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Creativity</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">
+                        Temperature <span className="text-muted-foreground">{draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value={draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature}
+                        onChange={e => updateConfig('temperature', parseFloat(e.target.value))}
+                        className="accent-primary"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">Stop Sequences</label>
+                      <input
+                        type="text"
+                        value={draftConfigs.stopSequences?.join(', ') ?? ''}
+                        onChange={e => {
+                          const vals = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                          updateConfig('stopSequences', vals.length > 0 ? vals : undefined)
+                        }}
+                        placeholder="e.g. stop, 🛑"
+                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Length</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">Max Output Tokens</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={draftConfigs.maxOutputTokens ?? ''}
+                        onChange={e => updateConfig('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="Provider default"
+                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sampling</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">
+                        Top P <span className="text-muted-foreground">{draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP}
+                        onChange={e => updateConfig('topP', parseFloat(e.target.value))}
+                        className="accent-primary"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">
+                        Top K <span className="text-muted-foreground">{draftConfigs.topK ?? 'Provider default'}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="2"
+                        max="100"
+                        step="1"
+                        value={draftConfigs.topK ?? DEFAULT_MODEL_CONFIGS.topK}
+                        onChange={e => updateConfig('topK', parseInt(e.target.value))}
+                        className="accent-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Penalties</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">
+                        Presence Penalty <span className="text-muted-foreground">{draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="-2"
+                        max="2"
+                        step="0.1"
+                        value={draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty}
+                        onChange={e => updateConfig('presencePenalty', parseFloat(e.target.value))}
+                        className="accent-primary"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">
+                        Frequency Penalty <span className="text-muted-foreground">{draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="-2"
+                        max="2"
+                        step="0.1"
+                        value={draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty}
+                        onChange={e => updateConfig('frequencyPenalty', parseFloat(e.target.value))}
+                        className="accent-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Determinism</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[12px] font-medium flex justify-between">Seed</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={draftConfigs.seed ?? ''}
+                        onChange={e => updateConfig('seed', e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="Provider default"
+                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        <div className="flex border-b border-border px-6 mt-2 gap-4 text-[12px] font-medium">
+        {/* FOOTER */}
+        <div className="p-5 border-t border-border bg-card flex justify-between items-center z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
           <button
-            onClick={() => setActiveTab('config')}
-            className={`pb-3 border-b-2 transition-colors ${
-              activeTab === 'config'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+            type="button"
+            onClick={clear}
+            className="rounded-md px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:text-destructive hover:bg-destructive/10"
           >
-            Configuration
+            Clear key
           </button>
           <button
-            onClick={() => setActiveTab('model')}
-            className={`pb-3 border-b-2 transition-colors ${
-              activeTab === 'model'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={save}
+            className="glow-hover rounded-lg bg-primary px-6 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 shadow-md"
           >
-            Model &amp; API Key
+            Save Configuration
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
-          {activeTab === 'model' ? (
-            <form
-              onSubmit={e => {
-                e.preventDefault()
-                save()
-              }}
-              autoComplete="off"
-              className="flex flex-col gap-5"
-            >
-              <input
-                type="text"
-                name="prevent_autofill_adv"
-                className="hidden"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="off"
-              />
-              <input
-                type="password"
-                name="prevent_autofill_adv_pwd"
-                className="hidden"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="off"
-              />
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="adv-provider" className="text-[12px] font-medium">
-                  Model provider
-                </label>
-                <div className="relative">
-                  <select
-                    id="adv-provider"
-                    value={draftProvider}
-                    onChange={e => {
-                      setDraftProvider(e.target.value)
-                      const p = providers.find(p => p.id === e.target.value)
-                      if (p) setDraftModel(p.models[0].id)
-                    }}
-                    className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  >
-                    {providers.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="adv-model" className="text-[12px] font-medium">
-                  Model
-                </label>
-                <div className="relative">
-                  <select
-                    id="adv-model"
-                    value={draftModel}
-                    onChange={e => setDraftModel(e.target.value)}
-                    className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  >
-                    {currentProvider.models.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="adv-settings-key" className="text-[12px] font-medium">
-                  API key
-                </label>
-                <div className="relative">
-                  <LockKeyhole className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-                  <input
-                    id="adv-settings-key"
-                    name="model_api_secret_key"
-                    type={visible ? 'text' : 'password'}
-                    value={draftKey}
-                    onChange={e => setDraftKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    autoComplete="new-password"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    className="h-10 w-full rounded-lg border border-border bg-background px-10 pr-10 font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                  <button
-                    type="button"
-                    aria-label={visible ? 'Hide API key' : 'Show API key'}
-                    onClick={() => setVisible(!visible)}
-                    className="absolute right-2 top-2 flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                  >
-                    {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-                <p className="text-[11px] leading-5 text-muted-foreground">Stored only for this browser session.</p>
-              </div>
-            </form>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <div>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Creativity
-                </p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">
-                      Temperature{' '}
-                      <span className="text-muted-foreground">
-                        {draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature}
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="2"
-                      step="0.1"
-                      value={draftConfigs.temperature ?? DEFAULT_MODEL_CONFIGS.temperature}
-                      onChange={e => updateConfig('temperature', parseFloat(e.target.value))}
-                      className="accent-primary"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">Stop Sequences</label>
-                    <input
-                      type="text"
-                      value={draftConfigs.stopSequences?.join(', ') ?? ''}
-                      onChange={e => {
-                        const vals = e.target.value
-                          .split(',')
-                          .map(s => s.trim())
-                          .filter(Boolean)
-                        updateConfig('stopSequences', vals.length > 0 ? vals : undefined)
-                      }}
-                      placeholder="e.g. stop, 🛑"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Length
-                </p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">Max Output Tokens</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={draftConfigs.maxOutputTokens ?? ''}
-                      onChange={e =>
-                        updateConfig('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)
-                      }
-                      placeholder="Provider default"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Sampling
-                </p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">
-                      Top P{' '}
-                      <span className="text-muted-foreground">
-                        {draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP}
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={draftConfigs.topP ?? DEFAULT_MODEL_CONFIGS.topP}
-                      onChange={e => updateConfig('topP', parseFloat(e.target.value))}
-                      className="accent-primary"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">
-                      Top K{' '}
-                      <span className="text-muted-foreground">
-                        {draftConfigs.topK ?? 'Provider default'}
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="2"
-                      max="100"
-                      step="1"
-                      value={draftConfigs.topK ?? DEFAULT_MODEL_CONFIGS.topK}
-                      onChange={e => updateConfig('topK', parseInt(e.target.value))}
-                      className="accent-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Penalties
-                </p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">
-                      Presence Penalty{' '}
-                      <span className="text-muted-foreground">
-                        {draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty}
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="-2"
-                      max="2"
-                      step="0.1"
-                      value={draftConfigs.presencePenalty ?? DEFAULT_MODEL_CONFIGS.presencePenalty}
-                      onChange={e => updateConfig('presencePenalty', parseFloat(e.target.value))}
-                      className="accent-primary"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">
-                      Frequency Penalty{' '}
-                      <span className="text-muted-foreground">
-                        {draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty}
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="-2"
-                      max="2"
-                      step="0.1"
-                      value={draftConfigs.frequencyPenalty ?? DEFAULT_MODEL_CONFIGS.frequencyPenalty}
-                      onChange={e => updateConfig('frequencyPenalty', parseFloat(e.target.value))}
-                      className="accent-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Determinism
-                </p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium flex justify-between">Seed</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={draftConfigs.seed ?? ''}
-                      onChange={e =>
-                        updateConfig('seed', e.target.value ? parseInt(e.target.value) : undefined)
-                      }
-                      placeholder="Provider default"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-6 border-t border-border flex items-center justify-between bg-card mt-auto">
-          {activeTab === 'config' ? (
-            <>
-              <button
-                onClick={resetConfigs}
-                className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive"
-              >
-                Reset to defaults
-              </button>
-              <button
-                onClick={save}
-                className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Save Config
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={clear}
-                className="rounded-md px-1 py-2 text-[12px] text-muted-foreground transition-colors hover:text-destructive"
-              >
-                Clear key
-              </button>
-              <button
-                onClick={save}
-                className="glow-hover rounded-lg bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Save &amp; Apply
-              </button>
-            </>
-          )}
-        </div>
       </div>
     </div>
   )
 }
+
 
 /**
  * Main interactive playground workbench.
@@ -916,7 +597,7 @@ export function PlaygroundScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <StatusPill icon={Sparkles} label="Model" value={currentModelName} onClick={() => setBasicSettingsOpen(true)} />
+          <StatusPill icon={Sparkles} label="Model" value={currentModelName} onClick={() => setConfigOpen(true)} />
         </div>
       </header>
 
@@ -929,7 +610,7 @@ export function PlaygroundScreen() {
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setAdvancedSettingsOpen(true)}
+              onClick={() => setConfigOpen(true)}
               className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[12px] font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-accent sm:flex"
             >
               <SlidersHorizontal className="size-3.5 text-muted-foreground" /> Tune Model
@@ -1065,23 +746,8 @@ export function PlaygroundScreen() {
         </div>
       </section>
 
-      {basicSettingsOpen && (
-        <BasicModelSettings
-          providers={providers}
-          providerId={providerId}
-          modelId={modelId}
-          apiKey={apiKey}
-          setProviderId={setProviderId}
-          setModelId={setModelId}
-          setApiKey={setApiKey}
-          onClose={() => setBasicSettingsOpen(false)}
-          presets={presets}
-          onApplyPreset={handleApplyPreset}
-        />
-      )}
-
-      {advancedSettingsOpen && (
-        <AdvancedModelSettings
+      {configOpen && (
+        <ModelConfigurationDrawer
           providers={providers}
           providerId={providerId}
           modelId={modelId}
@@ -1091,7 +757,7 @@ export function PlaygroundScreen() {
           setModelId={setModelId}
           setApiKey={setApiKey}
           setConfigs={setConfigs}
-          onClose={() => setAdvancedSettingsOpen(false)}
+          onClose={() => setConfigOpen(false)}
           presets={presets}
           onApplyPreset={handleApplyPreset}
         />
@@ -1099,3 +765,4 @@ export function PlaygroundScreen() {
     </main>
   )
 }
+
