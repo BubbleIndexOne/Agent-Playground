@@ -174,7 +174,7 @@ function BasicModelSettings({
             autoComplete="off"
           />
 
-          {presets && presets.length > 0 && onApplyPreset && (
+          {presets && onApplyPreset && (
             <div className="flex flex-col gap-2 border-b border-border pb-4">
               <label htmlFor="preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
                 <Sparkles className="size-3.5" />
@@ -183,6 +183,7 @@ function BasicModelSettings({
               <div className="relative">
                 <select
                   id="preset"
+                  disabled={presets.length === 0}
                   onChange={e => {
                     const selected = presets.find(p => p.id === e.target.value)
                     if (selected) {
@@ -191,15 +192,20 @@ function BasicModelSettings({
                       onApplyPreset?.(selected)
                     }
                   }}
-                  className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                 >
-                  <option value="">-- Choose a preset --</option>
+                  <option value="">{presets.length === 0 ? 'No presets available' : '-- Choose a preset --'}</option>
                   {presets.filter(p => !p.is_archived).map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
               </div>
+              {presets.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Create a preset in the Models tab to quickly apply settings.
+                </p>
+              )}
             </div>
           )}
 
@@ -393,6 +399,52 @@ function AdvancedModelSettings({
           </button>
         </div>
 
+        {presets && onApplyPreset && (
+          <div className="flex flex-col gap-2 border-b border-border p-6 pb-6 bg-accent/10">
+            <label htmlFor="adv-preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
+              <Sparkles className="size-3.5" />
+              Apply a Model Preset
+            </label>
+            <div className="relative">
+              <select
+                id="adv-preset"
+                disabled={presets.length === 0}
+                onChange={e => {
+                  const selected = presets.find(p => p.id === e.target.value)
+                  if (selected) {
+                    setDraftProvider(selected.provider)
+                    setDraftModel(selected.model_id || '')
+                    onApplyPreset?.(selected)
+                    setDraftConfigs(prev => ({
+                      ...prev,
+                      temperature: selected.params?.temperature,
+                      topP: selected.params?.topP,
+                      topK: selected.params?.topK,
+                      maxOutputTokens: selected.params?.maxOutputTokens,
+                      presencePenalty: selected.params?.presencePenalty,
+                      frequencyPenalty: selected.params?.frequencyPenalty,
+                      seed: selected.params?.seed,
+                      stopSequences: selected.params?.stopSequences,
+                    }))
+                  }
+                }}
+                className="h-10 w-full appearance-none rounded-lg border border-border bg-card px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              >
+                <option value="">{presets.length === 0 ? 'No presets available' : '-- Choose a preset --'}</option>
+                {presets.filter(p => !p.is_archived).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+            </div>
+            {presets.length === 0 && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Create a preset in the Models tab to quickly apply settings.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex border-b border-border px-6 mt-2 gap-4 text-[12px] font-medium">
           <button
             onClick={() => setActiveTab('config')}
@@ -443,46 +495,6 @@ function AdvancedModelSettings({
                 autoComplete="off"
               />
 
-              {presets && presets.length > 0 && onApplyPreset && (
-                <div className="flex flex-col gap-2 border-b border-border pb-4">
-                  <label htmlFor="adv-preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
-                    <Sparkles className="size-3.5" />
-                    Apply a Model Preset
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="adv-preset"
-                      onChange={e => {
-                        const selected = presets.find(p => p.id === e.target.value)
-                        if (selected) {
-                          setDraftProvider(selected.provider)
-                          setDraftModel(selected.model_id || '')
-                          onApplyPreset?.(selected)
-                          // Optionally update draftConfigs here so the UI reflects it immediately
-                          setDraftConfigs(prev => ({
-                            ...prev,
-                            temperature: selected.params?.temperature,
-                            topP: selected.params?.topP,
-                            topK: selected.params?.topK,
-                            maxOutputTokens: selected.params?.maxOutputTokens,
-                            presencePenalty: selected.params?.presencePenalty,
-                            frequencyPenalty: selected.params?.frequencyPenalty,
-                            seed: selected.params?.seed,
-                            stopSequences: selected.params?.stopSequences,
-                          }))
-                        }
-                      }}
-                      className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    >
-                      <option value="">-- Choose a preset --</option>
-                      {presets.filter(p => !p.is_archived).map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-                  </div>
-                </div>
-              )}
               <div className="flex flex-col gap-2">
                 <label htmlFor="adv-provider" className="text-[12px] font-medium">
                   Model provider
