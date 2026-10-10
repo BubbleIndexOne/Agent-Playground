@@ -44,7 +44,9 @@ export function useClientToolEditor({ initialTool, onSave }: UseClientToolEditor
     }
   )
 
-  const [activeRightTab, setActiveRightTab] = useState<'schema' | 'capabilities' | 'sandbox'>('schema')
+  const [activeRightTab, setActiveRightTab] = useState<
+    'schema' | 'capabilities' | 'sandbox' | 'versions'
+  >('schema')
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)

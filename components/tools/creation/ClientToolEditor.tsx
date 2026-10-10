@@ -16,10 +16,12 @@ import {
   Check,
   RotateCcw,
   GripVertical,
+  History,
 } from 'lucide-react'
 import { Tool } from '../types'
 import { ToolParametersBuilder } from './ToolParametersBuilder'
 import { LiveTestSandbox } from './LiveTestSandbox'
+import { ToolVersionHistory } from './ToolVersionHistory'
 import { useClientToolEditor } from './useClientToolEditor'
 
 export interface ClientToolEditorProps {
@@ -259,6 +261,18 @@ export function ClientToolEditor(props: ClientToolEditorProps) {
               <Sliders className="size-3.5" />
               Permissions
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveRightTab('versions')}
+              className={`flex items-center gap-1.5 py-3 ml-4 border-b-2 transition-colors ${
+                activeRightTab === 'versions'
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <History className="size-3.5" />
+              Revisions
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -375,6 +389,13 @@ export function ClientToolEditor(props: ClientToolEditorProps) {
                   </div>
                 </div>
               </div>
+            )}
+
+            {activeRightTab === 'versions' && (
+              <ToolVersionHistory
+                toolId={initialTool?.id}
+                currentVersionNumber={initialTool?.current_version?.version_number}
+              />
             )}
           </div>
         </div>
