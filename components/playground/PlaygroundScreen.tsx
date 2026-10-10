@@ -39,7 +39,8 @@ import {
 } from '@/src/lib/api'
 import { DEFAULT_MODEL_CONFIGS } from '@/src/lib/constants'
 import ReactMarkdown from 'react-markdown'
-
+import { useModelPresets } from '../model-presets/ModelPresetsContext'
+import { ModelPresetItem } from '../model-presets/types'
 /**
  * Status pill button rendered in the header for quick model identification and settings access.
  */
@@ -95,6 +96,8 @@ function BasicModelSettings({
   setModelId: (v: string) => void
   setApiKey: (v: string) => void
   onClose: () => void
+  presets?: ModelPresetItem[]
+  onApplyPreset?: (preset: ModelPresetItem) => void
 }) {
   const [draftProvider, setDraftProvider] = useState(providerId)
   const [draftModel, setDraftModel] = useState(modelId)
@@ -168,6 +171,35 @@ function BasicModelSettings({
             aria-hidden="true"
             autoComplete="off"
           />
+
+          {presets && presets.length > 0 && onApplyPreset && (
+            <div className="flex flex-col gap-2 border-b border-border pb-4">
+              <label htmlFor="preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
+                <Sparkles className="size-3.5" />
+                Apply a Model Preset
+              </label>
+              <div className="relative">
+                <select
+                  id="preset"
+                  onChange={e => {
+                    const selected = presets.find(p => p.id === e.target.value)
+                    if (selected) {
+                      setDraftProvider(selected.provider)
+                      setDraftModel(selected.model_id || '')
+                      onApplyPreset(selected)
+                    }
+                  }}
+                  className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">-- Choose a preset --</option>
+                  {presets.filter(p => !p.is_archived).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <label htmlFor="provider" className="text-[12px] font-medium">
@@ -294,6 +326,8 @@ function AdvancedModelSettings({
   setApiKey: (v: string) => void
   setConfigs: (v: ModelConfig) => void
   onClose: () => void
+  presets?: ModelPresetItem[]
+  onApplyPreset?: (preset: ModelPresetItem) => void
 }) {
   const [draftProvider, setDraftProvider] = useState(providerId)
   const [draftModel, setDraftModel] = useState(modelId)
@@ -404,6 +438,47 @@ function AdvancedModelSettings({
                 aria-hidden="true"
                 autoComplete="off"
               />
+
+              {presets && presets.length > 0 && onApplyPreset && (
+                <div className="flex flex-col gap-2 border-b border-border pb-4">
+                  <label htmlFor="adv-preset" className="text-[12px] font-medium text-primary flex items-center gap-2">
+                    <Sparkles className="size-3.5" />
+                    Apply a Model Preset
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="adv-preset"
+                      onChange={e => {
+                        const selected = presets.find(p => p.id === e.target.value)
+                        if (selected) {
+                          setDraftProvider(selected.provider)
+                          setDraftModel(selected.model_id || '')
+                          onApplyPreset(selected)
+                          // Optionally update draftConfigs here so the UI reflects it immediately
+                          setDraftConfigs(prev => ({
+                            ...prev,
+                            temperature: selected.params.temperature,
+                            topP: selected.params.topP,
+                            topK: selected.params.topK,
+                            maxOutputTokens: selected.params.maxOutputTokens,
+                            presencePenalty: selected.params.presencePenalty,
+                            frequencyPenalty: selected.params.frequencyPenalty,
+                            seed: selected.params.seed,
+                            stopSequences: selected.params.stopSequences,
+                          }))
+                        }
+                      }}
+                      className="h-10 w-full appearance-none rounded-lg border border-border bg-accent/30 px-3 text-[12px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">-- Choose a preset --</option>
+                      {presets.filter(p => !p.is_archived).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <label htmlFor="adv-provider" className="text-[12px] font-medium">
                   Model provider
@@ -703,6 +778,25 @@ export function PlaygroundScreen() {
   const [apiKey, setApiKey] = useState('')
   const [configs, setConfigs] = useState<ModelConfig>({})
 
+  // Integrate presets
+  const { presets } = useModelPresets()
+
+  const handleApplyPreset = (preset: ModelPresetItem) => {
+    // Apply parameters to the playground state
+    const newConfigs = { ...configs }
+    if (preset.params.temperature !== undefined) newConfigs.temperature = preset.params.temperature
+    if (preset.params.topP !== undefined) newConfigs.topP = preset.params.topP
+    if (preset.params.topK !== undefined) newConfigs.topK = preset.params.topK
+    if (preset.params.maxOutputTokens !== undefined) newConfigs.maxOutputTokens = preset.params.maxOutputTokens
+    if (preset.params.presencePenalty !== undefined) newConfigs.presencePenalty = preset.params.presencePenalty
+    if (preset.params.frequencyPenalty !== undefined) newConfigs.frequencyPenalty = preset.params.frequencyPenalty
+    if (preset.params.seed !== undefined) newConfigs.seed = preset.params.seed
+    if (preset.params.stopSequences !== undefined) newConfigs.stopSequences = preset.params.stopSequences
+    
+    setConfigs(newConfigs)
+    saveModelConfigs(newConfigs)
+  }
+
   const [basicSettingsOpen, setBasicSettingsOpen] = useState(false)
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false)
   const [ran, setRan] = useState(false)
@@ -965,6 +1059,8 @@ export function PlaygroundScreen() {
           setModelId={setModelId}
           setApiKey={setApiKey}
           onClose={() => setBasicSettingsOpen(false)}
+          presets={presets}
+          onApplyPreset={handleApplyPreset}
         />
       )}
 
@@ -980,6 +1076,8 @@ export function PlaygroundScreen() {
           setApiKey={setApiKey}
           setConfigs={setConfigs}
           onClose={() => setAdvancedSettingsOpen(false)}
+          presets={presets}
+          onApplyPreset={handleApplyPreset}
         />
       )}
     </main>
