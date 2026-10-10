@@ -21,6 +21,8 @@ function CreateToolContent() {
   const router = useRouter()
   const { saveTool } = useTools()
   const [creationStep, setCreationStep] = useState<'choose' | 'client' | 'service'>('choose')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleCancel = () => {
     if (creationStep !== 'choose') {
@@ -30,9 +32,16 @@ function CreateToolContent() {
     }
   }
 
-  const handleSave = (tool: Tool) => {
-    saveTool(tool)
-    router.push('/tools')
+  const handleSave = async (tool: Tool) => {
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      await saveTool(tool)
+      router.push('/tools')
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save tool to server')
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -61,6 +70,12 @@ function CreateToolContent() {
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col gap-5 p-5 md:p-8">
+        {saveError && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-[12px] text-destructive">
+            <span>{saveError}</span>
+          </div>
+        )}
+
         {creationStep === 'choose' && (
           <ChooseToolType onSelect={type => setCreationStep(type)} />
         )}

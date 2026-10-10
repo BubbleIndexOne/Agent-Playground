@@ -59,6 +59,16 @@ export function ToolCard({
             >
               {tool.type === 'client' ? 'Client' : 'Connected'}
             </span>
+            {tool.current_version?.version_number ? (
+              <span className="rounded bg-accent/80 border border-border px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground shrink-0">
+                v{tool.current_version.version_number}
+              </span>
+            ) : null}
+            {tool.is_public && (
+              <span className="rounded-full bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.2 text-[9px] font-medium text-purple-400 shrink-0">
+                Public
+              </span>
+            )}
           </div>
 
           <p className="text-[12px] text-muted-foreground line-clamp-2 leading-relaxed">

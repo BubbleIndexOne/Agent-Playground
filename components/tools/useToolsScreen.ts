@@ -44,16 +44,28 @@ export function useToolsScreen() {
     router.push(`/tools/edit?id=${encodeURIComponent(tool.id)}`)
   }
 
-  const handleDuplicateTool = (tool: Tool) => {
-    duplicateTool(tool)
+  const handleDuplicateTool = async (tool: Tool) => {
+    try {
+      await duplicateTool(tool)
+    } catch (err) {
+      console.error('Failed to duplicate tool:', err)
+    }
   }
 
-  const handleDeleteTool = (id: string) => {
-    deleteTool(id)
+  const handleDeleteTool = async (id: string, purge?: boolean) => {
+    try {
+      await deleteTool(id, purge)
+    } catch (err) {
+      console.error('Failed to delete tool:', err)
+    }
   }
 
-  const handleStatusChange = (id: string, status: ToolStatus) => {
-    updateToolStatus(id, status)
+  const handleStatusChange = async (id: string, status: ToolStatus) => {
+    try {
+      await updateToolStatus(id, status)
+    } catch (err) {
+      console.error('Failed to update tool status:', err)
+    }
   }
 
   return {
