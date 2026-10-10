@@ -494,8 +494,7 @@ export function PlaygroundScreen() {
     saveModelConfigs(newConfigs)
   }
 
-  const [basicSettingsOpen, setBasicSettingsOpen] = useState(false)
-  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
   const [ran, setRan] = useState(false)
   const [loading, setLoading] = useState(false)
   const [responseOutput, setResponseOutput] = useState('')
