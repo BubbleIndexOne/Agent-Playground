@@ -99,7 +99,14 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
         serviceType: serviceId,
         connectionString: connectionString.trim(),
       },
-      updatedAt: new Date().toLocaleDateString(),
+      status: initialTool?.status || 'draft',
+      is_public: initialTool?.is_public || false,
+      allow_client_execution: initialTool?.allow_client_execution || false,
+      connector_type: initialTool?.connector_type || null,
+      current_version_id: initialTool?.current_version_id || null,
+      current_version: initialTool?.current_version || null,
+      created_at: initialTool?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
 
     onSave(toolToSave)

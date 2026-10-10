@@ -15,7 +15,7 @@ export const FILTER_OPTIONS: { id: ToolFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'client', label: 'Client Tools' },
   { id: 'mcp', label: 'Connected' },
-  { id: 'published', label: 'Published' },
+  { id: 'verified', label: 'Verified' },
   { id: 'draft', label: 'Drafts' },
 ]
 

@@ -1,71 +1,23 @@
+'use client'
+
 /**
  * @fileoverview History Workspace Screen Component
  *
- * Provides inspection and auditing of previous prompt executions, token usage,
- * execution latencies, and responses. Reads live session history from persistent storage.
+ * Pure presentational shell. All logic is in `useHistory`.
  */
 
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import {
-  Clock3,
-  Search,
-  PanelLeft,
-  Trash2,
-} from 'lucide-react'
-
-export interface HistoryEntry {
-  id: string
-  prompt: string
-  response: string
-  model: string
-  tokens: number
-  latencyMs: number
-  timestamp: string
-}
-
-export const HISTORY_STORAGE_KEY = 'workspace_history'
+import React from 'react'
+import { Clock3, Search, PanelLeft, Trash2 } from 'lucide-react'
+import { useHistory } from './useHistory'
 
 export function HistoryScreen() {
-  const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Load live execution history from storage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(HISTORY_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed)) {
-            setHistory(parsed)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to read workspace execution history from localStorage:', err)
-      }
-    }
-  }, [])
-
-  const handleClearHistory = () => {
-    setHistory([])
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(HISTORY_STORAGE_KEY)
-      } catch (err) {
-        console.error('Failed to clear workspace execution history:', err)
-      }
-    }
-  }
-
-  const filteredHistory = history.filter(item => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      return item.prompt.toLowerCase().includes(q) || item.model.toLowerCase().includes(q)
-    }
-    return true
-  })
+  const {
+    history,
+    filteredHistory,
+    searchQuery,
+    setSearchQuery,
+    handleClearHistory,
+  } = useHistory()
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -132,7 +84,6 @@ export function HistoryScreen() {
                       </span>
                       <span className="text-[11px] text-muted-foreground">{item.timestamp}</span>
                     </div>
-
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
                       <span>{item.tokens} tokens</span>
                       <span>{item.latencyMs}ms</span>

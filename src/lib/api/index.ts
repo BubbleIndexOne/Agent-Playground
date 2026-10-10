@@ -6,10 +6,10 @@
  * hyper-parameters into vendor-specific options and returns normalized results and metrics.
  */
 
-import { generateText, type CoreMessage } from 'ai'
+import { generateText } from 'ai'
 import mockData from '../mockdata.json'
 import { providerFactories } from './providers'
-import { Provider, ModelConfig, CallResult } from './types'
+import { Provider, ModelConfig, CallResult, CoreMessage } from './types'
 
 export * from './types'
 export * from './session'

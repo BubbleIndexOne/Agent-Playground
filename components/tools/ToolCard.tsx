@@ -18,40 +18,16 @@ import {
 } from 'lucide-react'
 import { Tool, ToolStatus } from './types'
 import { useToolCardMenu } from './hooks/useToolCardMenu'
+import { getStatusDescription } from './utils'
 
-function getStatusDescription(status: ToolStatus): string {
-  switch (status) {
-    case 'draft': return 'Tool is in development and not yet ready for use.'
-    case 'testing': return 'Tool is currently being tested.'
-    case 'verified': return 'Tool has been verified and is ready for use.'
-    case 'registered': return 'Tool is registered in the MCP directory.'
-    case 'rejected': return 'Tool verification failed or was rejected.'
-    case 'deprecated': return 'Tool is no longer supported or recommended.'
-    default: return 'Unknown status.'
-  }
-}
-
-/**
- * Props for the `ToolCard` component.
- */
 export interface ToolCardProps {
-  /** The tool data object to render */
   tool: Tool
-  /** Callback fired when the card or edit action is clicked */
   onEdit: (tool: Tool) => void
-  /** Callback fired to clone/duplicate the tool */
   onDuplicate: (tool: Tool) => void
-  /** Callback fired to delete the tool from the workspace */
   onDelete: (id: string) => void
-  /** Optional callback to change the tool's status */
   onStatusChange?: (id: string, status: ToolStatus) => void
 }
 
-/**
- * Interactive card component representing a single workspace tool.
- *
- * @param props - ToolCardProps containing tool data and action callbacks.
- */
 export function ToolCard({
   tool,
   onEdit,

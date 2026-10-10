@@ -1,15 +1,10 @@
 /**
  * @fileoverview Full-Featured Client Tool IDE & Code Editor
  *
- * Provides a split-pane development environment for authoring, configuring, and testing
- * client-side JavaScript tools:
- * - Left pane: Tool name, mandatory AI documentation, and code editor.
- * - Right pane: Tabbed panel for Parameters builder, Live Sandbox, and Runtime Capabilities.
- * - Bi-directional AST synchronization between code JSDoc comments and UI state.
- * - Resizable horizontal split divider.
+ * Pure UI shell for the ClientToolEditor. Logic is in useClientToolEditor.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import React from 'react'
 import {
   Globe,
   HardDrive,
@@ -22,198 +17,44 @@ import {
   RotateCcw,
   GripVertical,
 } from 'lucide-react'
-import { Tool, ToolParameter, ToolCapabilities } from '../types'
+import { Tool } from '../types'
 import { ToolParametersBuilder } from './ToolParametersBuilder'
 import { LiveTestSandbox } from './LiveTestSandbox'
-import {
-  parseParametersFromCode,
-  surgicallyUpdateParamInCode,
-  surgicallyAddParamToCode,
-  surgicallyRemoveParamFromCode,
-  generateFreshTemplate,
-} from '../utils/codeSync'
+import { useClientToolEditor } from './useClientToolEditor'
 
-/**
- * Props for the `ClientToolEditor` component.
- */
 export interface ClientToolEditorProps {
-  /** Initial tool state if modifying an existing tool */
   initialTool?: Tool | null
-  /** Callback to exit editor without saving */
   onCancel: () => void
-  /** Callback to save the updated or newly created tool */
   onSave: (tool: Tool) => void
 }
 
-/**
- * Comprehensive client-side tool editor and testbed.
- *
- * @param props - Component props containing initial tool data and navigation handlers.
- */
-export function ClientToolEditor({ initialTool, onCancel, onSave }: ClientToolEditorProps) {
+export function ClientToolEditor(props: ClientToolEditorProps) {
+  const { initialTool, onCancel } = props
+  const {
+    name, setName,
+    description, setDescription,
+    parameters,
+    code, setCode,
+    capabilities,
+    activeRightTab, setActiveRightTab,
+    showValidationErrors,
+    feedbackNotice,
+    showResetConfirm, setShowResetConfirm,
+    parseStatus,
+    leftWidthPercent,
+    isResizing, setIsResizing,
+    containerRef,
+    toggleCapability,
+    handleAddParam,
+    handleUpdateParam,
+    handleRemoveParam,
+    handleResetToTemplate,
+    isNameValid,
+    isDescValid,
+    handleSaveClick,
+  } = useClientToolEditor(props)
 
-  const [name, setName] = useState(initialTool?.name || '')
-  const [description, setDescription] = useState(initialTool?.description || '')
-  
-  // parameters state is now a live-parsed view of the JSDoc
-  const [parameters, setParameters] = useState<ToolParameter[]>(initialTool?.parameters || [])
-  
-  const [code, setCode] = useState(
-    initialTool?.code ||
-      generateFreshTemplate(
-        initialTool?.name || 'MyTool',
-        initialTool?.description || 'Custom capability for the AI agent.',
-        initialTool?.parameters || []
-      )
-  )
-  
-  const [capabilities, setCapabilities] = useState<ToolCapabilities>(
-    initialTool?.capabilities || {
-      network: true,
-      storage: false,
-      environment: false,
-    }
-  )
-
-  const [activeRightTab, setActiveRightTab] = useState<'schema' | 'capabilities' | 'sandbox'>('schema')
-  const [showValidationErrors, setShowValidationErrors] = useState(false)
-  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null)
-  const [showResetConfirm, setShowResetConfirm] = useState(false)
-  
-  const [parseStatus, setParseStatus] = useState<'idle' | 'parsing' | 'error' | 'success'>('idle')
-  const isEditingFromUI = useRef(false)
-
-  // Resizable split panel state (default 55% left code panel)
-  const [leftWidthPercent, setLeftWidthPercent] = useState(55)
-  const [isResizing, setIsResizing] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing || !containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
-      const newLeftWidth = ((e.clientX - rect.left) / rect.width) * 100
-      // Clamp between 25% and 75%
-      const clamped = Math.min(Math.max(newLeftWidth, 25), 75)
-      setLeftWidthPercent(clamped)
-    }
-
-    const handleMouseUp = () => {
-      if (isResizing) {
-        setIsResizing(false)
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-      }
-    }
-
-    if (isResizing) {
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isResizing])
-
-  const toggleCapability = (key: keyof ToolCapabilities) => {
-    setCapabilities(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const showNotification = (msg: string) => {
-    setFeedbackNotice(msg)
-    setTimeout(() => setFeedbackNotice(null), 3000)
-  }
-
-  // Live JSDoc Parsing Effect (Debounced)
-  useEffect(() => {
-    if (isEditingFromUI.current) {
-      // Optionally could skip parsing immediately after a UI edit, 
-      // but re-parsing ensures full synchronization. We let it parse.
-    }
-
-    setParseStatus('parsing')
-    
-    const handler = setTimeout(() => {
-      try {
-        const parsed = parseParametersFromCode(code)
-        
-        // Update Title/Description if they were empty
-        if (parsed.extractedTitle && !name.trim()) setName(parsed.extractedTitle)
-        if (parsed.extractedDescription && !description.trim()) setDescription(parsed.extractedDescription)
-        
-        setParameters(parsed.parameters)
-        setParseStatus('success')
-        
-        setTimeout(() => setParseStatus('idle'), 2000)
-      } catch (err) {
-        console.error('Failed to parse JSDoc:', err)
-        setParseStatus('error')
-        // We do NOT clear parameters here. We keep the last valid state.
-      }
-      isEditingFromUI.current = false
-    }, 400)
-
-    return () => clearTimeout(handler)
-  }, [code, name, description])
-
-  // Surgical UI updates
-  const handleAddParam = (newParam: ToolParameter) => {
-    isEditingFromUI.current = true
-    const newCode = surgicallyAddParamToCode(code, newParam)
-    setCode(newCode)
-    setParameters(prev => [...prev, newParam])
-  }
-
-  const handleUpdateParam = (id: string, oldName: string, updatedParam: ToolParameter) => {
-    isEditingFromUI.current = true
-    const newCode = surgicallyUpdateParamInCode(code, oldName, updatedParam)
-    setCode(newCode)
-    setParameters(prev => prev.map(p => p.id === id ? updatedParam : p))
-  }
-
-  const handleRemoveParam = (id: string, paramName: string) => {
-    isEditingFromUI.current = true
-    const newCode = surgicallyRemoveParamFromCode(code, paramName)
-    setCode(newCode)
-    setParameters(prev => prev.filter(p => p.id !== id))
-  }
-
-  // Reset to fresh scaffold template
-  const handleResetToTemplate = () => {
-    const fresh = generateFreshTemplate(name || 'MyTool', description || '', parameters)
-    setCode(fresh)
-    setShowResetConfirm(false)
-    showNotification('Code reset to standard template')
-  }
-
-  const isNameValid = name.trim().length > 0
-  const isDescValid = description.trim().length > 0
   const isValid = isNameValid && isDescValid
-
-  const handleSaveClick = () => {
-    if (!isValid) {
-      setShowValidationErrors(true)
-      return
-    }
-
-    const toolToSave: Tool = {
-      id: initialTool?.id || Math.random().toString(36).substring(2, 9),
-      name: name.trim(),
-      description: description.trim(),
-      type: 'client',
-      published: initialTool ? initialTool.published : false,
-      parameters,
-      code,
-      capabilities,
-      updatedAt: new Date().toLocaleDateString(),
-    }
-
-    onSave(toolToSave)
-  }
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">

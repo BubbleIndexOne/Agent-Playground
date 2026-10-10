@@ -1,37 +1,28 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+/**
+ * @fileoverview Model Presets Screen - Pure UI
+ */
+
+import React from 'react'
 import { Plus, Search, Settings2, SlidersHorizontal, Trash2, Edit3, Loader2, AlertCircle } from 'lucide-react'
-import { useModelPresets } from './ModelPresetsContext'
-import { ModelPresetItem } from './types'
 import { WorkspaceShell } from '../layout/WorkspaceShell'
 import { ModelPresetEditor } from './ModelPresetEditor'
+import { useModelPresetsScreen } from './useModelPresetsScreen'
 
 export function ModelPresetsScreen() {
-  const { presets, isLoading, error, deletePreset } = useModelPresets()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [editorState, setEditorState] = useState<{ isOpen: boolean; preset?: ModelPresetItem }>({ isOpen: false })
-
-  const filteredPresets = useMemo(() => {
-    return presets.filter(preset => {
-      if (preset.is_archived) return false
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        return preset.name.toLowerCase().includes(q) || preset.provider.toLowerCase().includes(q)
-      }
-      return true
-    })
-  }, [presets, searchQuery])
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this preset?')) {
-      await deletePreset(id)
-    }
-  }
-
-  const openNewEditor = () => setEditorState({ isOpen: true })
-  const openEditEditor = (preset: ModelPresetItem) => setEditorState({ isOpen: true, preset })
-  const closeEditor = () => setEditorState({ isOpen: false })
+  const {
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    filteredPresets,
+    handleDelete,
+    editorState,
+    openNewEditor,
+    openEditEditor,
+    closeEditor,
+  } = useModelPresetsScreen()
 
   return (
     <WorkspaceShell>

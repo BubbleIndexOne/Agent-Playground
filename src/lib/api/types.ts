@@ -5,7 +5,10 @@
  * definitions, model specifications, hyper-parameter configs, and invocation results.
  */
 
-import type { CoreMessage } from 'ai'
+export interface CoreMessage {
+  role: 'system' | 'user' | 'assistant' | 'data'
+  content: string
+}
 import { REASONING_LEVELS, TOOL_CHOICES } from '../constants'
 
 /**

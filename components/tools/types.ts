@@ -109,6 +109,12 @@ export interface Tool {
   parameters?: ToolParameter[]
   /** Connection details for connected external services */
   serviceConfig?: ToolServiceConfig
+  /** Legacy code field */
+  code?: string
+  /** Legacy capabilities field */
+  capabilities?: ToolCapabilities
+  /** Legacy published field */
+  published?: boolean
 }
 
 /**
@@ -123,7 +129,7 @@ export type CreationStep = 'none' | 'choose' | 'client' | 'service'
 /**
  * Filter categories for querying workspace tools.
  */
-export type ToolFilter = 'all' | 'client' | 'mcp' | 'published' | 'draft'
+export type ToolFilter = 'all' | 'client' | 'mcp' | 'verified' | 'draft'
 
 /**
  * Props for the ToolsHeader presentation component.

@@ -1,100 +1,24 @@
 /**
  * @fileoverview Reactive Connectivity & Service Status Notification
  *
- * Implements modern industry best practice for connectivity monitoring:
- * - ZERO background polling or interval spam.
- * - Reactive detection: listens to native browser 'offline' / 'online' events.
- * - Reactive failure interception: hooks into failed user API calls (network error or 5xx) via requests.ts.
- * - Automatically disappears when connectivity is restored or manually dismissed.
+ * Pure UI shell for the HealthStatusBanner. Logic is in useHealthStatus.
  */
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { WifiOff, Radio, CheckCircle2, X, RefreshCw } from 'lucide-react'
-import { onNetworkError, onNetworkRestored } from '@/api/requests'
-import { getHealth } from '@/api/health'
-
-type HealthStatus = 'healthy' | 'server_unreachable' | 'offline'
+import { useHealthStatus } from './useHealthStatus'
 
 export function HealthStatusBanner() {
-  const [status, setStatus] = useState<HealthStatus>('healthy')
-  const [isDismissed, setIsDismissed] = useState(false)
-  const [showRestoredNotice, setShowRestoredNotice] = useState(false)
-  const [isRetrying, setIsRetrying] = useState(false)
-
-  useEffect(() => {
-    // 1. Initial check on browser load for native offline state
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setStatus('offline')
-      setIsDismissed(false)
-    }
-
-    // 2. Native browser network events (zero network traffic)
-    const handleOnline = () => {
-      setStatus('healthy')
-      setShowRestoredNotice(true)
-      setTimeout(() => setShowRestoredNotice(false), 3000)
-    }
-
-    const handleOffline = () => {
-      setStatus('offline')
-      setIsDismissed(false)
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    // 3. Reactive interception of actual API failures (status 0 or 5xx)
-    const unsubscribeError = onNetworkError(() => {
-      // If browser is already offline, keep offline message
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setStatus('offline')
-      } else {
-        setStatus('server_unreachable')
-      }
-      setIsDismissed(false)
-    })
-
-    // 4. Reactive notification when any subsequent API call succeeds
-    const unsubscribeRestored = onNetworkRestored(() => {
-      setStatus('healthy')
-      setShowRestoredNotice(true)
-      setTimeout(() => setShowRestoredNotice(false), 3000)
-    })
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-      unsubscribeError()
-      unsubscribeRestored()
-    }
-  }, [])
-
-  // Manual one-shot retry (only triggered when user explicitly clicks Retry)
-  const handleManualRetry = async () => {
-    if (isRetrying) return
-    setIsRetrying(true)
-    try {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setStatus('offline')
-        return
-      }
-
-      const res = await getHealth()
-      if (res?.status === 'ok') {
-        setStatus('healthy')
-        setShowRestoredNotice(true)
-        setTimeout(() => setShowRestoredNotice(false), 3000)
-      } else {
-        setStatus('server_unreachable')
-      }
-    } catch {
-      setStatus('server_unreachable')
-    } finally {
-      setIsRetrying(false)
-    }
-  }
+  const {
+    status,
+    isDismissed,
+    setIsDismissed,
+    showRestoredNotice,
+    isRetrying,
+    handleManualRetry,
+  } = useHealthStatus()
 
   // Don't render if healthy and no temporary restored message, or if user dismissed
   if ((status === 'healthy' && !showRestoredNotice) || isDismissed) {

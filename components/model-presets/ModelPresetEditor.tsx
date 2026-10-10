@@ -1,9 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+/**
+ * @fileoverview Model Preset Editor - Pure UI
+ */
+
+import React from 'react'
 import { X, SlidersHorizontal, Loader2, Save } from 'lucide-react'
-import { ModelPresetItem, CreateModelPresetInput, UpdateModelPresetInput, ModelPresetParams } from './types'
-import { useModelPresets } from './ModelPresetsContext'
+import { ModelPresetItem } from './types'
+import { useModelPresetEditor } from './useModelPresetEditor'
+import { PROVIDERS, MODELS_BY_PROVIDER } from './constants'
 
 export interface ModelPresetEditorProps {
   /** If provided, we are in Edit mode. If undefined, we are creating a new preset. */
@@ -11,99 +16,22 @@ export interface ModelPresetEditorProps {
   onClose: () => void
 }
 
-const PROVIDERS = [
-  { id: 'anthropic', label: 'Anthropic (Claude)' },
-  { id: 'openai', label: 'OpenAI (GPT)' },
-  { id: 'google', label: 'Google (Gemini)' },
-  { id: 'custom', label: 'Custom Endpoint' }
-]
-
-const MODELS_BY_PROVIDER: Record<string, { id: string; label: string }[]> = {
-  anthropic: [
-    { id: 'claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet' },
-    { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-    { id: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
-  ],
-  openai: [
-    { id: 'gpt-4o', label: 'GPT-4o' },
-    { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { id: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
-  ],
-  google: [
-    { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-    { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
-  ],
-  custom: []
-}
-
 export function ModelPresetEditor({ preset, onClose }: ModelPresetEditorProps) {
-  const { createPreset, updatePreset, defaults } = useModelPresets()
-  
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Form State
-  const [name, setName] = useState(preset?.name || '')
-  const [provider, setProvider] = useState(preset?.provider || 'anthropic')
-  const [modelId, setModelId] = useState(preset?.model_id || 'claude-3-5-sonnet-20240620')
-  
-  // Params State (initialized with defaults or existing preset)
-  const [params, setParams] = useState<ModelPresetParams>({
-    temperature: preset?.params?.temperature ?? defaults?.temperature ?? 0.7,
-    topP: preset?.params?.topP ?? defaults?.topP ?? 1.0,
-    topK: preset?.params?.topK ?? defaults?.topK,
-    maxOutputTokens: preset?.params?.maxOutputTokens ?? defaults?.maxOutputTokens,
-  })
-
-  // Handle provider change to set default model
-  useEffect(() => {
-    if (!preset) {
-      const availableModels = MODELS_BY_PROVIDER[provider] || []
-      if (availableModels.length > 0) {
-        setModelId(availableModels[0].id)
-      } else {
-        setModelId('')
-      }
-    }
-  }, [provider, preset])
-
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setError('Please provide a name for the preset')
-      return
-    }
-
-    setIsSubmitting(true)
-    setError(null)
-
-    try {
-      if (preset) {
-        await updatePreset(preset.id, {
-          name,
-          provider,
-          model_id: modelId,
-          params
-        })
-      } else {
-        await createPreset({
-          name,
-          provider,
-          model_id: modelId,
-          params
-        })
-      }
-      onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to save preset')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const updateParam = (key: keyof ModelPresetParams, value: number) => {
-    setParams(prev => ({ ...prev, [key]: value }))
-  }
+  const {
+    isSubmitting,
+    showAdvanced,
+    setShowAdvanced,
+    error,
+    name,
+    setName,
+    provider,
+    setProvider,
+    modelId,
+    setModelId,
+    params,
+    handleSave,
+    updateParam,
+  } = useModelPresetEditor(preset, onClose)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">

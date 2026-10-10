@@ -1,63 +1,26 @@
+'use client'
+
 /**
  * @fileoverview Agents Workspace Screen Component
  *
- * Provides the interactive UI for configuring, launching, and managing automated
- * multi-step agent workflows.
+ * Pure presentational shell. All logic is in `useAgents`.
  */
 
-'use client'
+import React from 'react'
+import { Bot, Plus, Search, PanelLeft, Layers } from 'lucide-react'
+import { useAgents } from './useAgents'
+import { AgentFilter } from './types'
 
-import React, { useState, useEffect } from 'react'
-import {
-  Bot,
-  Plus,
-  Search,
-  PanelLeft,
-  Layers,
-} from 'lucide-react'
-
-export interface AgentItem {
-  id: string
-  name: string
-  description: string
-  status: 'active' | 'paused' | 'draft'
-  model: string
-  toolsCount: number
-  lastRun: string
-}
-
-const AGENTS_STORAGE_KEY = 'workspace_agents'
+const FILTER_TABS: AgentFilter[] = ['all', 'active', 'paused', 'draft']
 
 export function AgentsScreen() {
-  const [agents, setAgents] = useState<AgentItem[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | 'active' | 'paused' | 'draft'>('all')
-
-  // Load user agents from localStorage if available
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(AGENTS_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed)) {
-            setAgents(parsed)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to read workspace agents from localStorage:', err)
-      }
-    }
-  }, [])
-
-  const filteredAgents = agents.filter(agent => {
-    if (filter !== 'all' && agent.status !== filter) return false
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      return agent.name.toLowerCase().includes(q) || agent.description.toLowerCase().includes(q)
-    }
-    return true
-  })
+  const {
+    filteredAgents,
+    searchQuery,
+    setSearchQuery,
+    filter,
+    setFilter,
+  } = useAgents()
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -107,7 +70,7 @@ export function AgentsScreen() {
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto">
-              {(['all', 'active', 'paused', 'draft'] as const).map(tab => (
+              {FILTER_TABS.map(tab => (
                 <button
                   key={tab}
                   type="button"
