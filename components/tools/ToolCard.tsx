@@ -16,6 +16,7 @@ import {
   Layers,
   Calendar,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Tool, ToolStatus } from './types'
 import { useToolCardMenu } from './hooks/useToolCardMenu'
 import { getStatusDescription } from './utils'
@@ -35,7 +36,7 @@ export function ToolCard({
   onDelete,
   onStatusChange,
 }: ToolCardProps) {
-
+  const router = useRouter()
   const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
 
   return (
@@ -119,15 +120,19 @@ export function ToolCard({
 
               <div className="my-1 border-t border-border" />
 
-              <div className="flex items-center justify-between px-2.5 py-1.5 text-[12px] text-muted-foreground opacity-70 cursor-not-allowed">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  router.push(`/playground?tool=${encodeURIComponent(tool.id)}`)
+                }}
+                className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent"
+              >
                 <span className="flex items-center gap-2.5">
-                  <Sparkles className="size-3.5" />
-                  In Playground
+                  <Sparkles className="size-3.5 text-primary" />
+                  Test in Playground
                 </span>
-                <span className="rounded bg-accent px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                  Soon
-                </span>
-              </div>
+              </button>
 
               <div className="my-1 border-t border-border" />
 

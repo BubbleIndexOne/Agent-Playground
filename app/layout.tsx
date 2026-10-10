@@ -12,6 +12,7 @@ import { Geist, JetBrains_Mono, Caveat } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/context/AuthContext'
 import { ModelPresetsProvider } from '@/components/model-presets/ModelPresetsContext'
+import { ToolsProvider } from '@/components/tools/ToolsContext'
 import { HealthStatusBanner } from '@/components/health/HealthStatusBanner'
 import './globals.css'
 
@@ -48,8 +49,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased">
         <AuthProvider>
           <ModelPresetsProvider>
-            <HealthStatusBanner />
-            {children}
+            <ToolsProvider>
+              <HealthStatusBanner />
+              {children}
+            </ToolsProvider>
           </ModelPresetsProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

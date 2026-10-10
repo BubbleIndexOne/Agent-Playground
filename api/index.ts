@@ -9,6 +9,7 @@ export * from './requests'
 export * as authApi from './auth'
 export * as healthApi from './health'
 export * as toolsApi from './tools'
+export * as connectorsApi from './connectors'
 
 // Flat convenience re-exports
 export { signUp, login, refreshToken, getMe, updateMe, deleteMe } from './auth'
@@ -25,3 +26,9 @@ export {
   diffToolVersions,
   registerTool,
 } from './tools'
+export {
+  getConnectors,
+  saveConnectorCredentials,
+  testConnector,
+  deleteConnectorCredentials,
+} from './connectors'

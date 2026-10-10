@@ -15,10 +15,14 @@ import {
   LockKeyhole,
   Sparkles,
   X,
+  Wrench,
+  Check,
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { Provider, ModelConfig } from '@/src/lib/api'
 import { DEFAULT_MODEL_CONFIGS } from '@/src/lib/constants'
 import { ModelPresetItem } from '../model-presets/types'
+import { useTools } from '@/components/tools/ToolsContext'
 import { useModelConfigDrawer } from './useModelConfigDrawer'
 
 export interface ModelConfigurationDrawerProps {
@@ -43,6 +47,19 @@ export function ModelConfigurationDrawer(props: ModelConfigurationDrawerProps) {
     presets,
     onApplyPreset,
   } = props
+
+  const { tools } = useTools()
+  const searchParams = useSearchParams()
+  const preselectedTool = searchParams?.get('tool')
+  const [activeToolIds, setActiveToolIds] = React.useState<string[]>(
+    preselectedTool ? [preselectedTool] : []
+  )
+
+  const toggleTool = (id: string) => {
+    setActiveToolIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    )
+  }
 
   const {
     draftProvider,
@@ -130,6 +147,66 @@ export function ModelConfigurationDrawer(props: ModelConfigurationDrawerProps) {
               )}
             </div>
           )}
+
+          {/* ACTIVE WORKSPACE TOOLS SECTION */}
+          <div className="flex flex-col gap-3 border border-border p-5 rounded-xl bg-card shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[12px] font-semibold text-foreground flex items-center gap-2">
+                  <Wrench className="size-3.5 text-primary" /> Active Workspace Tools
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Attach verified tools to this session for LLM function calling.
+                </p>
+              </div>
+              <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {activeToolIds.length} attached
+              </span>
+            </div>
+
+            {tools.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">
+                No tools created yet in this workspace. Create client or MCP tools in the Tools tab.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
+                {tools.map((t) => {
+                  const isChecked = activeToolIds.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTool(t.id)}
+                      className={`flex items-center justify-between rounded-lg border p-2.5 text-left transition-all text-[11px] ${
+                        isChecked
+                          ? 'border-primary/40 bg-primary/5 text-foreground'
+                          : 'border-border/70 bg-background/50 text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`flex size-4 items-center justify-center rounded border ${
+                            isChecked
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-muted-foreground/40'
+                          }`}
+                        >
+                          {isChecked && <Check className="size-3" />}
+                        </div>
+                        <span className="font-semibold truncate">{t.name}</span>
+                        <span className="rounded bg-accent/80 px-1.5 py-0.2 font-mono text-[9px] text-muted-foreground">
+                          {t.type}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                        {t.parameters?.length || 0} args
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
           {/* PROVIDER & MODEL SECTION */}
           <div className="flex flex-col gap-5 border border-border p-5 rounded-xl bg-card shadow-sm">
