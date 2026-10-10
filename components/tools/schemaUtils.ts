@@ -66,3 +66,36 @@ export function jsonSchemaToParameters(schema: Record<string, any> | null | unde
     }
   })
 }
+
+/**
+ * Converts frontend ToolCapabilities object to backend string array (capabilities_json).
+ */
+export function capabilitiesToArray(capabilities: {
+  network: boolean
+  storage: boolean
+  environment: boolean
+}): string[] {
+  const caps: string[] = []
+  if (capabilities.network) caps.push('network:http_get', 'network')
+  if (capabilities.storage) caps.push('storage')
+  if (capabilities.environment) caps.push('environment')
+  return caps
+}
+
+/**
+ * Converts backend capabilities string array into frontend ToolCapabilities object.
+ */
+export function arrayToCapabilities(capsArray?: string[] | null): {
+  network: boolean
+  storage: boolean
+  environment: boolean
+} {
+  if (!Array.isArray(capsArray)) {
+    return { network: true, storage: false, environment: false }
+  }
+  return {
+    network: capsArray.some(c => c.startsWith('network')),
+    storage: capsArray.includes('storage'),
+    environment: capsArray.includes('environment'),
+  }
+}

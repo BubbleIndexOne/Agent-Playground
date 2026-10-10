@@ -300,6 +300,9 @@ export const apiClient = {
   patch: <T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     makeRequest<T>(endpoint, { ...options, method: 'PATCH', body }),
 
+  put: <T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+    makeRequest<T>(endpoint, { ...options, method: 'PUT', body }),
+
   delete: <T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     makeRequest<T>(endpoint, { ...options, method: 'DELETE', body }),
 }
