@@ -198,5 +198,6 @@ export function useClientToolEditor({ initialTool, onSave }: UseClientToolEditor
     isNameValid,
     isDescValid,
     handleSaveClick,
+    showNotification,
   }
 }

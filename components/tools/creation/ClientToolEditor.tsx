@@ -52,6 +52,7 @@ export function ClientToolEditor(props: ClientToolEditorProps) {
     isNameValid,
     isDescValid,
     handleSaveClick,
+    showNotification,
   } = useClientToolEditor(props)
 
   const isValid = isNameValid && isDescValid
@@ -278,6 +279,10 @@ export function ClientToolEditor(props: ClientToolEditorProps) {
                 parameters={parameters}
                 capabilities={capabilities}
                 toolName={name}
+                toolId={initialTool?.id}
+                onRegisterSuccess={() => {
+                  showNotification('Tool verified & registered in Cloudflare Sandbox!')
+                }}
               />
             )}
 

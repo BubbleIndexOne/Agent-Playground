@@ -1,18 +1,33 @@
 /**
  * @fileoverview useLiveTestSandbox hook
+ *
+ * Provides two testing engines:
+ * 1. In-browser mock sandbox with scoped capabilities (network, storage, env).
+ * 2. Automated Cloudflare Sandbox Worker Audit & Registration (POST /tools/{id}/register).
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { ToolParameter, ToolCapabilities } from '../types'
+import { ToolRegistrationResponse } from '../../../api/types'
+import * as toolsApi from '../../../api/tools'
 
 export interface UseLiveTestSandboxProps {
   code: string
   parameters: ToolParameter[]
   capabilities: ToolCapabilities
   toolName: string
+  toolId?: string
+  onRegisterSuccess?: (result: ToolRegistrationResponse) => void
 }
 
-export function useLiveTestSandbox({ code, parameters, capabilities, toolName }: UseLiveTestSandboxProps) {
+export function useLiveTestSandbox({
+  code,
+  parameters,
+  capabilities,
+  toolName,
+  toolId,
+  onRegisterSuccess,
+}: UseLiveTestSandboxProps) {
   const [inputArgsJson, setInputArgsJson] = useState('{}')
   const [isRunning, setIsRunning] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -20,6 +35,11 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
   const [latency, setLatency] = useState<number | null>(null)
   const [logs, setLogs] = useState<string[]>([])
   const [hasRun, setHasRun] = useState(false)
+
+  // Cloudflare Sandbox Registration State
+  const [isAuditing, setIsAuditing] = useState(false)
+  const [auditResult, setAuditResult] = useState<ToolRegistrationResponse | null>(null)
+  const [auditError, setAuditError] = useState<string | null>(null)
 
   const [inputHeightPercent, setInputHeightPercent] = useState(38)
   const [isResizingVertical, setIsResizingVertical] = useState(false)
@@ -57,7 +77,7 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
 
   const generateDefaultArgs = () => {
     const defaultObj: Record<string, any> = {}
-    parameters.forEach(p => {
+    parameters.forEach((p) => {
       const cleanName = p.name.trim()
       if (cleanName) {
         switch (p.type) {
@@ -100,6 +120,7 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
     }
   }
 
+  // 1. In-browser local mock test runner
   const handleRun = async () => {
     setIsRunning(true)
     setError(null)
@@ -121,15 +142,21 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
 
       const customConsole = {
         log: (...args: any[]) => {
-          const formatted = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')
+          const formatted = args
+            .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+            .join(' ')
           capturedLogs.push(`[LOG] ${formatted}`)
         },
         warn: (...args: any[]) => {
-          const formatted = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')
+          const formatted = args
+            .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+            .join(' ')
           capturedLogs.push(`[WARN] ${formatted}`)
         },
         error: (...args: any[]) => {
-          const formatted = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')
+          const formatted = args
+            .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+            .join(' ')
           capturedLogs.push(`[ERROR] ${formatted}`)
         },
       }
@@ -146,7 +173,7 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
         ? window.XMLHttpRequest
         : class {
             constructor() {
-              throw new Error("Permission Denied: Network access is disabled for this tool.")
+              throw new Error('Permission Denied: Network access is disabled for this tool.')
             }
           }
 
@@ -156,7 +183,9 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
             {},
             {
               get() {
-                throw new Error("Permission Denied: Local storage access is disabled for this tool. Enable 'Local Storage' in the Permissions tab.")
+                throw new Error(
+                  "Permission Denied: Local storage access is disabled for this tool. Enable 'Local Storage' in the Permissions tab."
+                )
               },
             }
           )
@@ -167,7 +196,9 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
             {},
             {
               get() {
-                throw new Error("Permission Denied: Environment access is disabled for this tool. Enable 'Environment Variables' in the Permissions tab.")
+                throw new Error(
+                  "Permission Denied: Environment access is disabled for this tool. Enable 'Environment Variables' in the Permissions tab."
+                )
               },
             }
           )
@@ -179,7 +210,9 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
           cleanCode = match[1]
         }
       } else if (/const\s+execute\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{/.test(cleanCode)) {
-        const match = cleanCode.match(/const\s+execute\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{([\s\S]*)\}/)
+        const match = cleanCode.match(
+          /const\s+execute\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{([\s\S]*)\}/
+        )
         if (match && match[1]) {
           cleanCode = match[1]
         }
@@ -212,7 +245,6 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
       )
 
       const res = await Promise.race([executionPromise, timeoutPromise])
-
       setResult(res !== undefined ? res : { status: 'Execution completed without return value' })
     } catch (err: any) {
       setError(err.message || String(err))
@@ -224,19 +256,56 @@ export function useLiveTestSandbox({ code, parameters, capabilities, toolName }:
     }
   }
 
+  // 2. Cloudflare Sandbox Automated Audit & Verification
+  const handleCloudflareRegister = async () => {
+    if (!toolId) {
+      setAuditError('Please save this tool before running the Cloudflare sandbox verification audit.')
+      return
+    }
+
+    setIsAuditing(true)
+    setAuditError(null)
+    setAuditResult(null)
+
+    try {
+      let parsedArgs: Record<string, any> = {}
+      try {
+        parsedArgs = JSON.parse(inputArgsJson)
+      } catch (err: any) {
+        throw new Error(`Invalid Input JSON: ${err.message}`)
+      }
+
+      const response = await toolsApi.registerTool(toolId, { inputs: parsedArgs })
+      setAuditResult(response)
+      if (response.success && onRegisterSuccess) {
+        onRegisterSuccess(response)
+      }
+    } catch (err: any) {
+      setAuditError(err.message || 'Cloudflare sandbox registration audit failed')
+    } finally {
+      setIsAuditing(false)
+    }
+  }
+
   return {
-    inputArgsJson, setInputArgsJson,
+    inputArgsJson,
+    setInputArgsJson,
     isRunning,
     result,
     error,
     latency,
     logs,
     hasRun,
+    isAuditing,
+    auditResult,
+    auditError,
     inputHeightPercent,
-    isResizingVertical, setIsResizingVertical,
+    isResizingVertical,
+    setIsResizingVertical,
     sandboxContainerRef,
     handleResetInputs,
     handleFormatJson,
     handleRun,
+    handleCloudflareRegister,
   }
 }
