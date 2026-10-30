@@ -1,14 +1,13 @@
+'use client'
+
 /**
  * @fileoverview Playground Alias Route (/playground)
  *
  * Redirects to the canonical default home route (/home).
  */
 
-'use client'
-
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { PlaygroundScreen } from '@/components/playground/PlaygroundScreen'
 
 export default function PlaygroundAliasPage() {
@@ -18,9 +17,5 @@ export default function PlaygroundAliasPage() {
     router.replace('/home')
   }, [router])
 
-  return (
-    <WorkspaceShell>
-      <PlaygroundScreen />
-    </WorkspaceShell>
-  )
+  return <PlaygroundScreen />
 }

@@ -6,7 +6,6 @@
 
 import React from 'react'
 import { Plus, Search, Settings2, SlidersHorizontal, Trash2, Edit3, Loader2, AlertCircle } from 'lucide-react'
-import { WorkspaceShell } from '../layout/WorkspaceShell'
 import { ModelPresetEditor } from './ModelPresetEditor'
 import { useModelPresetsScreen } from './useModelPresetsScreen'
 
@@ -25,7 +24,7 @@ export function ModelPresetsScreen() {
   } = useModelPresetsScreen()
 
   return (
-    <WorkspaceShell>
+    <>
       <div className="flex min-h-0 flex-1 flex-col">
         <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-border px-5 md:px-8">
           <div className="flex items-center gap-3 pl-10 md:pl-0">
@@ -74,10 +73,17 @@ export function ModelPresetsScreen() {
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0">
-            {isLoading ? (
-              <div className="py-24 flex flex-col items-center justify-center text-center">
-                <Loader2 className="size-8 text-primary animate-spin mb-4" />
-                <p className="text-[14px] font-medium text-foreground">Loading presets...</p>
+            {isLoading && (!filteredPresets || filteredPresets.length === 0) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="h-36 rounded-xl border border-border/40 bg-card/40 p-5 animate-pulse flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="h-4 w-1/2 rounded bg-white/[0.08]" />
+                      <div className="h-3 w-1/3 rounded bg-white/[0.04]" />
+                    </div>
+                    <div className="h-3 w-2/3 rounded bg-white/[0.05]" />
+                  </div>
+                ))}
               </div>
             ) : error ? (
               <div className="py-24 flex flex-col items-center justify-center text-center">
@@ -171,6 +177,6 @@ export function ModelPresetsScreen() {
           onClose={closeEditor} 
         />
       )}
-    </WorkspaceShell>
+    </>
   )
 }

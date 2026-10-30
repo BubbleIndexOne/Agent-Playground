@@ -136,19 +136,27 @@ export function ModelPresetEditor({ preset, onClose }: ModelPresetEditorProps) {
               <div>
                 <div className="flex justify-between mb-1.5">
                   <label className="text-[12px] font-medium text-foreground">Temperature</label>
-                  <span className="text-[12px] text-muted-foreground">{params.temperature}</span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {provider === 'anthropic' && (params.temperature ?? 1.0) > 1.0
+                      ? 1.0
+                      : (params.temperature ?? 1.0)}
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="0"
-                  max="2"
-                  step="0.1"
-                  value={params.temperature}
+                  max={provider === 'anthropic' ? 1.0 : 2.0}
+                  step="0.05"
+                  value={
+                    provider === 'anthropic' && (params.temperature ?? 1.0) > 1.0
+                      ? 1.0
+                      : (params.temperature ?? 1.0)
+                  }
                   onChange={e => updateParam('temperature', parseFloat(e.target.value))}
                   className="w-full accent-primary"
                 />
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Controls randomness. Higher values produce more diverse output.
+                  Controls randomness. {provider === 'anthropic' ? 'Anthropic models require temperature between 0.0 and 1.0.' : 'Higher values produce more diverse output.'}
                 </p>
               </div>
 
@@ -175,8 +183,11 @@ export function ModelPresetEditor({ preset, onClose }: ModelPresetEditorProps) {
                 <label className="mb-1.5 block text-[12px] font-medium text-foreground">Max Output Tokens</label>
                 <input
                   type="number"
-                  value={params.maxOutputTokens || ''}
-                  onChange={e => updateParam('maxOutputTokens', parseInt(e.target.value) || 0)}
+                  value={params.maxOutputTokens ?? ''}
+                  onChange={e => {
+                    const val = parseInt(e.target.value, 10)
+                    updateParam('maxOutputTokens', !isNaN(val) && val > 0 ? val : undefined)
+                  }}
                   placeholder="Leave empty for provider default"
                   className="h-9 w-full rounded-lg border border-border bg-background px-3 text-[13px] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
                 />

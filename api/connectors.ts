@@ -90,7 +90,7 @@ export async function deleteConnectorCredentials(
   options?: { signal?: AbortSignal }
 ): Promise<DeleteConnectorResponse> {
   return apiClient.delete<DeleteConnectorResponse>(
-    `/connectors/${encodeURIComponent(type)}`,
+    `/connectors/${encodeURIComponent(type)}/credentials`,
     undefined,
     { signal: options?.signal }
   )

@@ -12,8 +12,7 @@
 import React, { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react'
-import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
-import { ToolsProvider, useTools } from '@/components/tools/ToolsContext'
+import { useTools } from '@/components/tools/ToolsContext'
 import { ClientToolEditor } from '@/components/tools/creation/ClientToolEditor'
 import { ConnectServiceForm } from '@/components/tools/creation/ConnectServiceForm'
 import { Tool } from '@/components/tools/types'
@@ -160,16 +159,12 @@ function EditToolContent() {
 
 export default function EditToolPage() {
   return (
-    <WorkspaceShell>
-      <ToolsProvider>
-        <Suspense
-          fallback={
-            <div className="p-8 text-[12px] text-muted-foreground">Loading tool editor...</div>
-          }
-        >
-          <EditToolContent />
-        </Suspense>
-      </ToolsProvider>
-    </WorkspaceShell>
+    <Suspense
+      fallback={
+        <div className="p-8 text-[12px] text-muted-foreground">Loading tool editor...</div>
+      }
+    >
+      <EditToolContent />
+    </Suspense>
   )
 }

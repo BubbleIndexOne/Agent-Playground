@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation'
 import { Tool, ToolStatus } from './types'
 import { useToolCardMenu } from './hooks/useToolCardMenu'
 import { getStatusDescription } from './utils'
+import { useAuth } from '@/context/AuthContext'
 
 export interface ToolCardProps {
   tool: Tool
@@ -36,11 +37,23 @@ export function ToolCard({
   onDelete,
 }: ToolCardProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const { menuOpen, setMenuOpen, menuRef } = useToolCardMenu()
+
+  // Evaluate ownership from backend payload or fallback to comparing current user ID
+  const isOwner = tool.is_owner ?? (user?.id ? tool.owner_id === user.id : true)
+
+  const handleCardClick = () => {
+    if (isOwner) {
+      onEdit(tool)
+    } else {
+      router.push(`/playground?tool=${encodeURIComponent(tool.id)}`)
+    }
+  }
 
   return (
     <div
-      onClick={() => onEdit(tool)}
+      onClick={handleCardClick}
       className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-5 transition-all duration-150 hover:border-primary/50 hover:bg-accent/40 cursor-pointer shadow-sm"
     >
       {/* Top Header info */}
@@ -93,17 +106,19 @@ export function ToolCard({
 
           {menuOpen && (
             <div className="absolute right-0 top-8 z-30 w-48 rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/40 animate-in fade-in zoom-in-95 duration-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onEdit(tool)
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent"
-              >
-                <Edit3 className="size-3.5 text-muted-foreground" />
-                Edit Tool
-              </button>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onEdit(tool)
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent"
+                >
+                  <Edit3 className="size-3.5 text-muted-foreground" />
+                  Edit Tool
+                </button>
+              )}
 
               <button
                 type="button"
@@ -133,19 +148,22 @@ export function ToolCard({
                 </span>
               </button>
 
-              <div className="my-1 border-t border-border" />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onDelete(tool.id)
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12px] text-destructive transition-colors hover:bg-destructive/10"
-              >
-                <Trash2 className="size-3.5" />
-                Delete Tool
-              </button>
+              {isOwner && (
+                <>
+                  <div className="my-1 border-t border-border" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onDelete(tool.id)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12px] text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete Tool
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -196,12 +214,17 @@ export function ToolCard({
         </div>
         
         {/* Server-side verification indicator / Audit action */}
-        {tool.status === 'registered' || tool.status === 'verified' ? (
+        {tool.status === 'verified' ? (
           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400">
             <CheckCircle2 className="size-3" />
             Verified
           </span>
-        ) : tool.status === 'draft' ? (
+        ) : tool.status === 'registered' ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400">
+            <CheckCircle2 className="size-3" />
+            Registered
+          </span>
+        ) : tool.status === 'draft' && isOwner ? (
           <button
             type="button"
             onClick={() => onEdit(tool)}

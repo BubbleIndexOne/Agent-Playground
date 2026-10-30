@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import { Bot, Plus, Search, PanelLeft, Layers } from 'lucide-react'
+import { Bot, Plus, Search, Sparkles, Layers } from 'lucide-react'
 import { useAgents } from './useAgents'
 import { AgentFilter } from './types'
 
@@ -26,13 +26,13 @@ export function AgentsScreen() {
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-border px-5 md:px-8">
         <div className="flex items-center gap-3 pl-10 md:pl-0">
-          <div className="hidden size-7 items-center justify-center rounded-md bg-accent text-muted-foreground sm:flex">
-            <PanelLeft className="size-3.5" />
+          <div className="hidden size-7 items-center justify-center rounded-md bg-primary/10 text-primary sm:flex">
+            <Sparkles className="size-3.5" />
           </div>
           <div>
-            <h1 className="text-[14px] font-semibold tracking-[-0.01em]">Agents</h1>
+            <h1 className="text-[14px] font-semibold tracking-[-0.01em]">Agent Studio</h1>
             <p className="hidden text-[11px] text-muted-foreground sm:block">
-              Build, run, and orchestrate autonomous AI workflows
+              Compose, customize, and bring playful AI personas to life
             </p>
           </div>
         </div>
@@ -42,10 +42,10 @@ export function AgentsScreen() {
         <div className="flex flex-col gap-4 border-b border-border pb-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-medium text-primary">Automation</p>
-              <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.035em]">Agent Systems</h2>
+              <p className="text-[11px] font-medium text-primary">Creative Atelier</p>
+              <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.035em]">Agent Personas</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Deploy autonomous systems equipped with customized tools, system prompts, and memory.
+                Craft intelligent companions equipped with customized capabilities, personality, and memory.
               </p>
             </div>
             <button
@@ -53,7 +53,7 @@ export function AgentsScreen() {
               className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90"
             >
               <Plus className="size-3.5" />
-              New Agent
+              New Persona
             </button>
           </div>
 

@@ -134,6 +134,7 @@ export interface ToolVersionResponse {
 export interface ToolResponse {
   id: string
   owner_id: string
+  is_owner?: boolean
   name: string
   description: string | null
   type: ToolType

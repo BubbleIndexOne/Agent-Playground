@@ -54,7 +54,8 @@ export function mapToolResponseToTool(tool: ToolResponse): Tool {
       ? jsonSchemaToParameters(tool.current_version.schema_json)
       : [],
     capabilities: arrayToCapabilities(tool.current_version?.capabilities_json),
-    published: tool.status === 'verified' || tool.status === 'registered',
+    published: tool.status === 'verified',
+    is_owner: tool.is_owner,
   }
 }
 
@@ -67,15 +68,19 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refreshTools = useCallback(async () => {
-    setIsLoading(true)
+    // Only set loading on cold start when there are no cached tools yet
+    setTools((current) => {
+      if (current.length === 0) setIsLoading(true)
+      return current
+    })
     setError(null)
     try {
       const fetchedTools = await toolsApi.getTools({ include_public: true })
       const mappedTools = fetchedTools.map(mapToolResponseToTool)
       setTools(mappedTools)
     } catch (err: any) {
-      console.error('Failed to fetch tools:', err)
-      setError(err.message || 'Failed to fetch tools')
+      console.warn('Tools fetch note:', err?.message || err)
+      setError(err?.message || 'Failed to fetch tools')
     } finally {
       setIsLoading(false)
     }
@@ -97,13 +102,18 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
           toolToSave.id.length > 20
 
         if (isExisting) {
-          // 1. Update Tool metadata (omit 'verified' to avoid 403 since verified transition is strictly server-side)
+          // 1. Update Tool metadata (only draft and deprecated can be set by regular users; lifecycle/verified is rejected by backend)
+          const settableStatuses: ToolStatus[] = ['draft', 'deprecated']
+          const statusToUpdate = toolToSave.status && settableStatuses.includes(toolToSave.status)
+            ? toolToSave.status
+            : undefined
+
           await toolsApi.updateTool(toolToSave.id, {
             name: toolToSave.name,
             description: toolToSave.description,
             is_public: toolToSave.is_public,
             allow_client_execution: toolToSave.allow_client_execution,
-            ...(toolToSave.status && toolToSave.status !== 'verified' ? { status: toolToSave.status } : {}),
+            ...(statusToUpdate ? { status: statusToUpdate } : {}),
           })
 
           // 2. Create new atomic version if code/parameters/capabilities provided
@@ -139,8 +149,12 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
             toolToSave.capabilities || { network: true, storage: false, environment: false }
           )
 
+          const defaultClientCode =
+            toolToSave.code?.trim() ||
+            `// Default Tool Implementation\nfunction execute(args) {\n  return { success: true, message: "Hello from tool", args };\n}`
+
           await toolsApi.createToolVersion(createdShell.id, {
-            code: toolToSave.type === 'client' ? toolToSave.code || null : null,
+            code: toolToSave.type === 'client' ? defaultClientCode : null,
             schema_json: schema,
             capabilities_json: caps,
           })
@@ -220,6 +234,14 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateToolStatus = useCallback(async (id: string, status: ToolStatus) => {
+    const ADMIN_ONLY_STATUSES: ToolStatus[] = ['verified', 'testing', 'registered', 'rejected']
+    if (ADMIN_ONLY_STATUSES.includes(status)) {
+      const err = new Error(
+        `Status "${status}" cannot be set manually. Lifecycle transitions require sandbox verification or administrator action.`
+      )
+      setError(err.message)
+      throw err
+    }
     try {
       await toolsApi.updateTool(id, { status })
       setTools((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))

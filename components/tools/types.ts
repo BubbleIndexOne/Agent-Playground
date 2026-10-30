@@ -79,6 +79,8 @@ export interface Tool {
   id: string
   /** Owner ID of the tool */
   owner_id?: string
+  /** Whether the current authenticated caller is the owner */
+  is_owner?: boolean
   /** Human-readable tool title */
   name: string
   /** Comprehensive tool documentation explaining when and how the AI should invoke it */

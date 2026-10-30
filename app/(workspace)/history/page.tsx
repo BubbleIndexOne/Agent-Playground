@@ -1,19 +1,15 @@
+'use client'
+
 /**
  * @fileoverview History Workspace Route (/history)
  *
  * Dedicated route for auditing past executions, token usage, and latency metrics.
+ * Layout and persistent shell are provided by (workspace)/layout.tsx.
  */
 
-'use client'
-
 import React from 'react'
-import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { HistoryScreen } from '@/components/history/HistoryScreen'
 
 export default function HistoryPage() {
-  return (
-    <WorkspaceShell>
-      <HistoryScreen />
-    </WorkspaceShell>
-  )
+  return <HistoryScreen />
 }

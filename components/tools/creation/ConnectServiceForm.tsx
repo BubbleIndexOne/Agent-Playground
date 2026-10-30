@@ -1,16 +1,16 @@
 /**
  * @fileoverview Connected Service Integration Form
  *
- * Form component for configuring external service connections (e.g., PostgreSQL database,
- * Slack workspace, or custom HTTP API endpoints) adhering to the Model Context Protocol (MCP) pattern.
- * Connects directly to backend /connectors endpoints and secure encrypted vault.
+ * Form component for configuring external service connections (PostgreSQL database,
+ * Slack workspace) adhering to the Model Context Protocol (MCP) pattern.
+ * Saves encrypted credentials into the backend vault via PUT /connectors/{type}/credentials
+ * and verifies live connectivity via POST /connectors/{type}/test.
  */
 
 import { useState, useEffect } from 'react'
 import {
   ChevronDown,
   Database,
-  Plug,
   MessageSquare,
   Activity,
   CheckCircle2,
@@ -18,52 +18,50 @@ import {
   Clock,
   Key,
 } from 'lucide-react'
-import { Tool, ToolServiceConfig } from '../types'
+import { Tool } from '../types'
 import * as connectorsApi from '../../../api/connectors'
-import { ConnectorItem } from '../../../api/types'
+import { ConnectorItem, PostgresCredentials, SlackCredentials } from '../../../api/types'
 
-/**
- * Props for the `ConnectServiceForm` component.
- */
 export interface ConnectServiceFormProps {
-  /** Existing tool instance if editing an existing service connection */
   initialTool?: Tool | null
-  /** Callback to cancel and return to the main tools list */
   onCancel: () => void
-  /** Callback invoked when the service is validated and saved */
   onSave: (tool: Tool) => void
 }
 
-/**
- * Supported service integration presets and metadata.
- */
 export const SERVICES = [
   { id: 'postgres', name: 'PostgreSQL Database', icon: Database },
   { id: 'slack', name: 'Slack Workspace', icon: MessageSquare },
-  { id: 'custom', name: 'Custom HTTP Service', icon: Plug },
 ]
 
-/**
- * Form for adding or editing an external service connection.
- */
 export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectServiceFormProps) {
   const [name, setName] = useState(initialTool?.name || '')
   const [description, setDescription] = useState(initialTool?.description || '')
-  const [serviceId, setServiceId] = useState(
-    initialTool?.connector_type || initialTool?.serviceConfig?.serviceType || SERVICES[0].id
+  const [serviceId, setServiceId] = useState<connectorsApi.SupportedConnectorType>(
+    (initialTool?.connector_type as connectorsApi.SupportedConnectorType) || 'postgres'
   )
-  const [connectionString, setConnectionString] = useState(
-    initialTool?.serviceConfig?.connectionString || ''
-  )
+
+  // Postgres Fields
+  const [pgHost, setPgHost] = useState('')
+  const [pgPort, setPgPort] = useState(5432)
+  const [pgDatabase, setPgDatabase] = useState('')
+  const [pgUser, setPgUser] = useState('')
+  const [pgPassword, setPgPassword] = useState('')
+  const [pgSsl, setPgSsl] = useState(true)
+  const [pgUriInput, setPgUriInput] = useState('')
+
+  // Slack Fields
+  const [slackBotToken, setSlackBotToken] = useState('')
+  const [slackSigningSecret, setSlackSigningSecret] = useState('')
 
   const [configuredConnectors, setConfiguredConnectors] = useState<ConnectorItem[]>([])
   const [isTesting, setIsTesting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [testResult, setTestResult] = useState<{
     success: boolean
     latency: number
     message: string
   } | null>(null)
-  const [testError, setTestError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [showValidation, setShowValidation] = useState(false)
 
   // Fetch configured connectors from backend vault
@@ -80,70 +78,130 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
       })
   }, [])
 
+  // Auto-parse connection URI when pasted
+  const handlePgUriChange = (uri: string) => {
+    setPgUriInput(uri)
+    try {
+      const parsed = new URL(uri)
+      if (parsed.protocol.startsWith('postgres')) {
+        if (parsed.hostname) setPgHost(parsed.hostname)
+        if (parsed.port) setPgPort(parseInt(parsed.port, 10))
+        if (parsed.pathname) setPgDatabase(parsed.pathname.replace(/^\//, ''))
+        if (parsed.username) setPgUser(decodeURIComponent(parsed.username))
+        if (parsed.password) setPgPassword(decodeURIComponent(parsed.password))
+        const sslMode = parsed.searchParams.get('sslmode')
+        if (sslMode === 'disable') setPgSsl(false)
+      }
+    } catch {
+      // not a full URI yet, let user continue typing
+    }
+  }
+
   const isNameValid = name.trim().length > 0
   const isDescValid = description.trim().length > 0
-  const isConnValid = connectionString.trim().length > 0
-  const isValid = isNameValid && isDescValid && isConnValid
+
+  const areCredentialsValid = () => {
+    if (serviceId === 'postgres') {
+      return (
+        pgHost.trim().length > 0 &&
+        pgDatabase.trim().length > 0 &&
+        pgUser.trim().length > 0 &&
+        pgPassword.length > 0
+      )
+    }
+    if (serviceId === 'slack') {
+      return slackBotToken.trim().startsWith('xoxb-')
+    }
+    return false
+  }
+
+  const isValid = isNameValid && isDescValid && areCredentialsValid()
+
+  const getCredentialsPayload = (): PostgresCredentials | SlackCredentials => {
+    if (serviceId === 'postgres') {
+      return {
+        host: pgHost.trim(),
+        port: pgPort || 5432,
+        database: pgDatabase.trim(),
+        user: pgUser.trim(),
+        password: pgPassword,
+        ssl: pgSsl,
+      }
+    }
+    return {
+      botToken: slackBotToken.trim(),
+      signingSecret: slackSigningSecret.trim() || undefined,
+    }
+  }
 
   const handleTestConnection = async () => {
-    if (!connectionString.trim()) return
+    if (!areCredentialsValid()) {
+      setShowValidation(true)
+      return
+    }
+
     setIsTesting(true)
     setTestResult(null)
-    setTestError(null)
+    setActionError(null)
 
     const startTime = performance.now()
     try {
-      if (serviceId === 'postgres' || serviceId === 'slack') {
-        const res = await connectorsApi.testConnector(serviceId as connectorsApi.SupportedConnectorType)
-        const elapsed = Math.round(performance.now() - startTime)
-        setTestResult({
-          success: res.success,
-          latency: elapsed,
-          message: res.message || `Connected to ${serviceId} successfully.`,
-        })
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 400))
-        const elapsed = Math.round(performance.now() - startTime)
-        setTestResult({
-          success: true,
-          latency: elapsed,
-          message: `Custom endpoint responded successfully.`,
-        })
-      }
+      const creds = getCredentialsPayload()
+      const res = await connectorsApi.testConnector(serviceId, creds)
+      const elapsed = Math.round(performance.now() - startTime)
+      setTestResult({
+        success: res.success,
+        latency: elapsed,
+        message: res.message || `Connected to ${serviceId} successfully.`,
+      })
     } catch (err: any) {
-      setTestError(err.message || 'Connection test failed')
+      setActionError(err.message || 'Connection test failed')
     } finally {
       setIsTesting(false)
     }
   }
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!isValid) {
       setShowValidation(true)
       return
     }
 
-    const toolToSave: Tool = {
-      id: initialTool?.id || Math.random().toString(36).substring(2, 9),
-      name: name.trim(),
-      description: description.trim(),
-      type: 'mcp',
-      published: initialTool ? initialTool.published : false,
-      serviceConfig: {
-        serviceType: serviceId,
-        connectionString: connectionString.trim(),
-      },
-      status: initialTool?.status || 'draft',
-      is_public: initialTool?.is_public || false,
-      allow_client_execution: initialTool?.allow_client_execution || false,
-      connector_type: serviceId,
-      current_version_id: initialTool?.current_version_id || null,
-      current_version: initialTool?.current_version || null,
-      created_at: initialTool?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    setIsSaving(true)
+    setActionError(null)
 
-    onSave(toolToSave)
+    try {
+      // 1. Save and verify credentials directly in backend vault
+      const creds = getCredentialsPayload()
+      await connectorsApi.saveConnectorCredentials(serviceId, creds, true)
+
+      // 2. Build Tool object
+      const toolToSave: Tool = {
+        id: initialTool?.id || Math.random().toString(36).substring(2, 9),
+        name: name.trim(),
+        description: description.trim(),
+        type: 'mcp',
+        published: initialTool ? initialTool.published : false,
+        serviceConfig: {
+          serviceType: serviceId,
+          connectionString: '',
+        },
+        status: initialTool?.status || 'draft',
+        is_public: initialTool?.is_public || false,
+        allow_client_execution: initialTool?.allow_client_execution || false,
+        connector_type: serviceId,
+        current_version_id: initialTool?.current_version_id || null,
+        current_version: initialTool?.current_version || null,
+        created_at: initialTool?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      onSave(toolToSave)
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to save credentials to vault')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -153,7 +211,7 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
           {initialTool ? 'Edit Connected Service' : 'Connect a Service'}
         </h3>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Link an external database, messaging platform, or remote API endpoint (Model Context Protocol).
+          Link an external database or messaging platform via Model Context Protocol (MCP).
         </p>
       </div>
 
@@ -161,7 +219,11 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
         {showValidation && !isValid && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-[12px] text-destructive">
             <AlertCircle className="size-4 shrink-0" />
-            <span>Please fill out all required fields (Name, Description, and Connection Details).</span>
+            <span>
+              {serviceId === 'slack' && !slackBotToken.trim().startsWith('xoxb-')
+                ? 'Slack bot token must start with "xoxb-"'
+                : 'Please fill out all required fields.'}
+            </span>
           </div>
         )}
 
@@ -190,7 +252,7 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
           <div className="relative">
             <select
               value={serviceId}
-              onChange={(e) => setServiceId(e.target.value)}
+              onChange={(e) => setServiceId(e.target.value as connectorsApi.SupportedConnectorType)}
               className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               {SERVICES.map((s) => (
@@ -229,52 +291,160 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
           />
         </div>
 
-        {/* Connection Details & Test Ping */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <label className="text-[12px] font-medium text-foreground">Connection String / Host</label>
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              disabled={isTesting || !connectionString.trim()}
-              className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline disabled:opacity-50 disabled:no-underline"
-            >
-              {isTesting ? <Activity className="size-3 animate-spin" /> : null}
-              Test Connection
-            </button>
-          </div>
-          <input
-            type="password"
-            value={connectionString}
-            onChange={(e) => setConnectionString(e.target.value)}
-            placeholder="postgres://agent:pass@host:5432/db or slack bot token"
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Credentials are securely encrypted in the vault and used for agent tool dispatch.
-          </p>
+        {/* Credentials Form Section */}
+        {serviceId === 'postgres' && (
+          <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-accent/20 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-foreground">PostgreSQL Credentials</span>
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={isTesting || !areCredentialsValid()}
+                className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+              >
+                {isTesting ? <Activity className="size-3 animate-spin" /> : null}
+                Test Connection
+              </button>
+            </div>
 
-          {/* Test connection result pill */}
-          {testResult && (
-            <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-[12px] text-emerald-400">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 shrink-0" />
-                <span>{testResult.message}</span>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-muted-foreground">Quick Paste URI (Optional)</label>
+              <input
+                type="text"
+                value={pgUriInput}
+                onChange={(e) => handlePgUriChange(e.target.value)}
+                placeholder="postgres://user:password@host:5432/database"
+                className="h-8 w-full rounded border border-border bg-background px-2.5 font-mono text-[11px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2 flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">Host *</label>
+                <input
+                  type="text"
+                  value={pgHost}
+                  onChange={(e) => setPgHost(e.target.value)}
+                  placeholder="db.example.com"
+                  className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+                />
               </div>
-              <span className="flex items-center gap-1 text-[11px] opacity-80">
-                <Clock className="size-3" />
-                {testResult.latency}ms
-              </span>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">Port</label>
+                <input
+                  type="number"
+                  value={pgPort}
+                  onChange={(e) => setPgPort(parseInt(e.target.value, 10) || 5432)}
+                  className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+                />
+              </div>
             </div>
-          )}
 
-          {testError && (
-            <div className="mt-1 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-[12px] text-destructive">
-              <AlertCircle className="size-4 shrink-0" />
-              <span>{testError}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">Database *</label>
+                <input
+                  type="text"
+                  value={pgDatabase}
+                  onChange={(e) => setPgDatabase(e.target.value)}
+                  placeholder="main"
+                  className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">User *</label>
+                <input
+                  type="text"
+                  value={pgUser}
+                  onChange={(e) => setPgUser(e.target.value)}
+                  placeholder="postgres"
+                  className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+                />
+              </div>
             </div>
-          )}
-        </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-muted-foreground">Password *</label>
+              <input
+                type="password"
+                value={pgPassword}
+                onChange={(e) => setPgPassword(e.target.value)}
+                placeholder="••••••••"
+                className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={pgSsl}
+                onChange={(e) => setPgSsl(e.target.checked)}
+                className="rounded border-border text-primary focus:ring-primary"
+              />
+              <span className="text-[11px] text-foreground">Require SSL</span>
+            </label>
+          </div>
+        )}
+
+        {serviceId === 'slack' && (
+          <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-accent/20 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-foreground">Slack Workspace Credentials</span>
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={isTesting || !areCredentialsValid()}
+                className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+              >
+                {isTesting ? <Activity className="size-3 animate-spin" /> : null}
+                Test Connection
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-muted-foreground">Bot User OAuth Token (xoxb-...) *</label>
+              <input
+                type="password"
+                value={slackBotToken}
+                onChange={(e) => setSlackBotToken(e.target.value)}
+                placeholder="xoxb-your-token-here"
+                className="h-8 w-full rounded border border-border bg-background px-2.5 font-mono text-[12px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-muted-foreground">Signing Secret (Optional)</label>
+              <input
+                type="password"
+                value={slackSigningSecret}
+                onChange={(e) => setSlackSigningSecret(e.target.value)}
+                placeholder="Signing secret for event verification"
+                className="h-8 w-full rounded border border-border bg-background px-2.5 text-[12px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Test connection result pill */}
+        {testResult && (
+          <div className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-[12px] text-emerald-400">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>{testResult.message}</span>
+            </div>
+            <span className="flex items-center gap-1 text-[11px] opacity-80">
+              <Clock className="size-3" />
+              {testResult.latency}ms
+            </span>
+          </div>
+        )}
+
+        {actionError && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-[12px] text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-border p-6 flex items-center justify-between bg-background/50 rounded-b-xl mt-auto">
@@ -288,8 +458,10 @@ export function ConnectServiceForm({ initialTool, onCancel, onSave }: ConnectSer
         <button
           type="button"
           onClick={handleSaveClick}
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90"
+          disabled={isSaving}
+          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground glow-hover transition-opacity hover:opacity-90 disabled:opacity-50"
         >
+          {isSaving ? <Activity className="size-4 animate-spin" /> : null}
           {initialTool ? 'Update Service' : 'Connect Service'}
         </button>
       </div>

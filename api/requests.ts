@@ -12,7 +12,8 @@
 import { AuthTokensResponse, ErrorResponse } from './types'
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || ''
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') ||
+  'https://agent-playground-backend-dev.bubbleindexone-dev.workers.dev'
 
 const ACCESS_TOKEN_KEY = 'ap_access_token'
 const REFRESH_TOKEN_KEY = 'ap_refresh_token'
@@ -78,13 +79,15 @@ export const tokenStorage = {
 export class ApiError extends Error {
   public statusCode: number
   public details: string | string[]
+  public data?: any
 
-  constructor(statusCode: number, message: string | string[]) {
+  constructor(statusCode: number, message: string | string[], data?: any) {
     const formattedMessage = Array.isArray(message) ? message.join(', ') : message
     super(formattedMessage || `Request failed with status ${statusCode}`)
     this.name = 'ApiError'
     this.statusCode = statusCode
     this.details = message
+    this.data = data
   }
 }
 
@@ -161,6 +164,42 @@ function notifyNetworkSuccess(): void {
   }
 }
 
+// ─── Concurrency-Safe Token Refresh ──────────────────────────────────────────
+
+let activeRefreshPromise: Promise<AuthTokensResponse | null> | null = null
+
+async function getRefreshedTokens(): Promise<AuthTokensResponse | null> {
+  if (activeRefreshPromise) {
+    return activeRefreshPromise
+  }
+
+  const refreshToken = tokenStorage.getRefreshToken()
+  if (!refreshToken) return null
+
+  activeRefreshPromise = (async () => {
+    try {
+      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+
+      if (refreshRes.ok) {
+        const newTokens: AuthTokensResponse = await refreshRes.json()
+        tokenStorage.setTokens(newTokens)
+        return newTokens
+      }
+      return null
+    } catch {
+      return null
+    } finally {
+      activeRefreshPromise = null
+    }
+  })()
+
+  return activeRefreshPromise
+}
+
 // ─── Core Request Execution ───────────────────────────────────────────────────
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -231,29 +270,13 @@ export async function makeRequest<T>(endpoint: string, options: RequestOptions =
     // Avoid recursion on login/refresh calls or already retried requests
     const isAuthEndpoint = cleanEndpoint.startsWith('/auth/login') || cleanEndpoint.startsWith('/auth/refresh')
     if (!_isRetry && !isAuthEndpoint) {
-      const refreshToken = tokenStorage.getRefreshToken()
-      if (refreshToken) {
-        try {
-          // Attempt token refresh
-          const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          })
-
-          if (refreshRes.ok) {
-            const newTokens: AuthTokensResponse = await refreshRes.json()
-            tokenStorage.setTokens(newTokens)
-
-            // Retry original request with new token
-            return makeRequest<T>(endpoint, {
-              ...options,
-              _isRetry: true,
-            })
-          }
-        } catch {
-          // Refresh failed, proceed to 401 handling
-        }
+      const newTokens = await getRefreshedTokens()
+      if (newTokens) {
+        // Retry original request with new token
+        return makeRequest<T>(endpoint, {
+          ...options,
+          _isRetry: true,
+        })
       }
     }
 
@@ -281,7 +304,7 @@ export async function makeRequest<T>(endpoint: string, options: RequestOptions =
     if (response.status >= 500) {
       notifyNetworkError(response.status, Array.isArray(message) ? message.join(', ') : message)
     }
-    throw new ApiError(response.status, message)
+    throw new ApiError(response.status, message, data)
   }
 
   notifyNetworkSuccess()

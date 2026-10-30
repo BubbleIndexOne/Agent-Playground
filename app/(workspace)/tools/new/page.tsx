@@ -10,8 +10,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, PanelLeft } from 'lucide-react'
-import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
-import { ToolsProvider, useTools } from '@/components/tools/ToolsContext'
+import { useTools } from '@/components/tools/ToolsContext'
 import { ChooseToolType } from '@/components/tools/creation/ChooseToolType'
 import { ClientToolEditor } from '@/components/tools/creation/ClientToolEditor'
 import { ConnectServiceForm } from '@/components/tools/creation/ConnectServiceForm'
@@ -99,11 +98,5 @@ function CreateToolContent() {
 }
 
 export default function NewToolPage() {
-  return (
-    <WorkspaceShell>
-      <ToolsProvider>
-        <CreateToolContent />
-      </ToolsProvider>
-    </WorkspaceShell>
-  )
+  return <CreateToolContent />
 }

@@ -45,20 +45,34 @@ export function useModelPresetEditor(preset?: ModelPresetItem, onClose?: () => v
     setIsSubmitting(true)
     setError(null)
 
+    // Sanitize parameters according to provider rules and remove 0/undefined tokens
+    const currentTemp = params.temperature ?? 1.0
+    const sanitizedParams: Record<string, any> = {
+      ...params,
+      temperature:
+        provider === 'anthropic' && currentTemp > 1.0 ? 1.0 : currentTemp,
+    }
+
+    if (params.maxOutputTokens && params.maxOutputTokens > 0) {
+      sanitizedParams.maxOutputTokens = params.maxOutputTokens
+    } else {
+      delete sanitizedParams.maxOutputTokens
+    }
+
     try {
       if (preset) {
         await updatePreset(preset.id, {
           name,
           provider,
           model_id: modelId,
-          params
+          params: sanitizedParams,
         })
       } else {
         await createPreset({
           name,
           provider,
           model_id: modelId,
-          params
+          params: sanitizedParams,
         })
       }
       onClose?.()
@@ -69,8 +83,8 @@ export function useModelPresetEditor(preset?: ModelPresetItem, onClose?: () => v
     }
   }
 
-  const updateParam = (key: keyof ModelPresetParams, value: number) => {
-    setParams(prev => ({ ...prev, [key]: value }))
+  const updateParam = (key: keyof ModelPresetParams, value: number | undefined) => {
+    setParams((prev) => ({ ...prev, [key]: value }))
   }
 
   return {

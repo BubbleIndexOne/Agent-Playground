@@ -59,10 +59,17 @@ export function ToolsScreen() {
 
           {activeTab === 'my-tools' && (
             <div className="flex-1 overflow-y-auto min-h-0">
-              {isLoading ? (
-                <div className="py-24 flex flex-col items-center justify-center text-center">
-                  <Loader2 className="size-8 text-primary animate-spin mb-4" />
-                  <p className="text-[14px] font-medium text-foreground">Loading tools...</p>
+              {isLoading && tools.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-40 rounded-xl border border-border/40 bg-card/40 p-5 animate-pulse flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="h-4 w-3/5 rounded bg-white/[0.08]" />
+                        <div className="h-3 w-4/5 rounded bg-white/[0.04]" />
+                      </div>
+                      <div className="h-3 w-1/3 rounded bg-white/[0.05]" />
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="py-24 flex flex-col items-center justify-center text-center">

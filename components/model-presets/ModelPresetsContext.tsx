@@ -26,14 +26,17 @@ export function ModelPresetsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refreshPresets = useCallback(async () => {
-    setIsLoading(true)
+    setPresets((current) => {
+      if (current.length === 0) setIsLoading(true)
+      return current
+    })
     setError(null)
     try {
       const response = await apiClient.get<{ success: boolean; presets: ModelPresetItem[] }>('/model-presets')
       setPresets(response.presets || [])
     } catch (err: any) {
-      console.error('Failed to fetch model presets:', err)
-      setError(err.message || 'Failed to fetch model presets')
+      console.warn('Presets fetch note:', err?.message || err)
+      setError(err?.message || 'Failed to fetch model presets')
     } finally {
       setIsLoading(false)
     }

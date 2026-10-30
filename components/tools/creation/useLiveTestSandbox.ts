@@ -281,7 +281,17 @@ export function useLiveTestSandbox({
         onRegisterSuccess(response)
       }
     } catch (err: any) {
-      setAuditError(err.message || 'Cloudflare sandbox registration audit failed')
+      const errorData = err?.data
+      const reason = errorData?.testResults?.reason
+      const details = errorData?.testResults?.details
+      let errorMsg = err.message || 'Cloudflare sandbox registration audit failed'
+      if (reason) {
+        errorMsg = `${reason}${details ? ` (${typeof details === 'object' ? JSON.stringify(details) : details})` : ''}`
+      }
+      setAuditError(errorMsg)
+      if (errorData?.testResults) {
+        setAuditResult(errorData)
+      }
     } finally {
       setIsAuditing(false)
     }
