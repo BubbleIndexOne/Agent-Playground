@@ -7,9 +7,10 @@ import { apiClient } from '../../api/requests'
 export interface ModelPresetsContextValue {
   presets: ModelPresetItem[]
   isLoading: boolean
+  isRevalidating: boolean
   error: string | null
   defaults: any | null
-  refreshPresets: () => Promise<void>
+  refreshPresets: (silent?: boolean) => Promise<void>
   fetchDefaults: () => Promise<void>
   createPreset: (input: CreateModelPresetInput) => Promise<ModelPresetItem>
   updatePreset: (id: string, input: UpdateModelPresetInput) => Promise<ModelPresetItem>
@@ -23,13 +24,17 @@ export function ModelPresetsProvider({ children }: { children: ReactNode }) {
   const [presets, setPresets] = useState<ModelPresetItem[]>([])
   const [defaults, setDefaults] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRevalidating, setIsRevalidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshPresets = useCallback(async () => {
-    setPresets((current) => {
-      if (current.length === 0) setIsLoading(true)
-      return current
-    })
+  const refreshPresets = useCallback(async (silent = false) => {
+    if (!silent) {
+      setPresets((current) => {
+        if (current.length === 0) setIsLoading(true)
+        return current
+      })
+    }
+    setIsRevalidating(true)
     setError(null)
     try {
       const response = await apiClient.get<{ success: boolean; presets: ModelPresetItem[] }>('/model-presets')
@@ -39,6 +44,7 @@ export function ModelPresetsProvider({ children }: { children: ReactNode }) {
       setError(err?.message || 'Failed to fetch model presets')
     } finally {
       setIsLoading(false)
+      setIsRevalidating(false)
     }
   }, [])
 
@@ -99,6 +105,7 @@ export function ModelPresetsProvider({ children }: { children: ReactNode }) {
   const value: ModelPresetsContextValue = {
     presets,
     isLoading,
+    isRevalidating,
     error,
     defaults,
     refreshPresets,

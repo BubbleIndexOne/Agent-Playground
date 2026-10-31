@@ -24,12 +24,13 @@ import { tokenStorage, onUnauthorized, ApiError } from '@/api/requests'
 interface AuthContextType {
   user: UserProfileResponse | null
   isLoading: boolean
+  isInitialLoading: boolean
   isAuthenticated: boolean
   error: string | null
   login: (data: LoginRequest) => Promise<AuthTokensResponse>
   signUp: (data: SignUpRequest) => Promise<SignUpResponse>
   logout: () => void
-  refreshUser: () => Promise<UserProfileResponse | null>
+  refreshUser: (options?: { showLoading?: boolean }) => Promise<UserProfileResponse | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -37,19 +38,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfileResponse | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
   const redirectToLogin = useCallback(() => {
-    if (pathname && !pathname.startsWith('/login')) {
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
       router.push('/login')
     }
-  }, [pathname, router])
+  }, [router])
 
-  const refreshUser = useCallback(async (): Promise<UserProfileResponse | null> => {
+  const refreshUser = useCallback(async (options?: { showLoading?: boolean }): Promise<UserProfileResponse | null> => {
     try {
-      setIsLoading(true)
+      if (options?.showLoading) {
+        setIsLoading(true)
+      }
       setError(null)
       const profile = await getMe()
       setUser(profile)
@@ -65,10 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null
     } finally {
       setIsLoading(false)
+      setIsInitialLoading(false)
     }
   }, [redirectToLogin])
 
-  // Bootstrap session on mount
+  // Bootstrap session once on mount (do NOT re-run on navigation/pathname change)
   useEffect(() => {
     // Subscribe to unauthorized signals from any API call
     const unsubscribe = onUnauthorized(() => {
@@ -76,17 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       redirectToLogin()
     })
 
-    // If currently on login page, skip aggressive initial getMe() to avoid immediate loop
-    if (pathname?.startsWith('/login')) {
+    // If currently on login page, skip initial getMe() to avoid redundant requests
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
       setIsLoading(false)
+      setIsInitialLoading(false)
       return unsubscribe
     }
 
-    // Call getMe() to verify session
-    refreshUser()
+    // Call getMe() once to bootstrap session
+    refreshUser().finally(() => {
+      setIsLoading(false)
+      setIsInitialLoading(false)
+    })
 
     return unsubscribe
-  }, [pathname, refreshUser, redirectToLogin])
+  }, [refreshUser, redirectToLogin])
 
   const handleLogin = async (data: LoginRequest): Promise<AuthTokensResponse> => {
     setIsLoading(true)
@@ -130,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoading,
+        isInitialLoading,
         isAuthenticated: !!user,
         error,
         login: handleLogin,

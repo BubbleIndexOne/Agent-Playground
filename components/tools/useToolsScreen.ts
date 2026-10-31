@@ -2,18 +2,23 @@
  * @fileoverview useToolsScreen hook
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Tool, ToolFilter, ToolStatus } from './types'
 import { useTools } from './ToolsContext'
 
 export function useToolsScreen() {
   const router = useRouter()
-  const { tools, isLoading, error, deleteTool, duplicateTool } = useTools()
+  const { tools, isLoading, error, refreshTools, deleteTool, duplicateTool } = useTools()
 
   const [activeTab, setActiveTab] = useState<'my-tools' | 'marketplace'>('my-tools')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<ToolFilter>('all')
+
+  // Background revalidation on mount (SWR pattern)
+  useEffect(() => {
+    refreshTools(true)
+  }, [refreshTools])
 
   const filteredTools = useMemo(() => {
     return tools.filter(tool => {

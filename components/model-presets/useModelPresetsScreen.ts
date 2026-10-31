@@ -2,14 +2,19 @@
  * @fileoverview Model Presets - useModelPresetsScreen hook
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useModelPresets } from './ModelPresetsContext'
 import { ModelPresetItem } from './types'
 
 export function useModelPresetsScreen() {
-  const { presets, isLoading, error, deletePreset } = useModelPresets()
+  const { presets, isLoading, error, refreshPresets, deletePreset } = useModelPresets()
   const [searchQuery, setSearchQuery] = useState('')
   const [editorState, setEditorState] = useState<{ isOpen: boolean; preset?: ModelPresetItem }>({ isOpen: false })
+
+  // Background revalidation on mount (SWR pattern)
+  useEffect(() => {
+    refreshPresets(true)
+  }, [refreshPresets])
 
   const filteredPresets = useMemo(() => {
     return presets.filter(preset => {

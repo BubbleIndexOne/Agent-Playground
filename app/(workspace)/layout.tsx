@@ -2,6 +2,7 @@ import React from 'react'
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell'
 import { ToolsProvider } from '@/components/tools/ToolsContext'
 import { ModelPresetsProvider } from '@/components/model-presets/ModelPresetsContext'
+import { AgentsProvider } from '@/components/agents/AgentsContext'
 
 /**
  * @fileoverview Shared Workspace Layout
@@ -17,7 +18,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   return (
     <ToolsProvider>
       <ModelPresetsProvider>
-        <WorkspaceShell>{children}</WorkspaceShell>
+        <AgentsProvider>
+          <WorkspaceShell>{children}</WorkspaceShell>
+        </AgentsProvider>
       </ModelPresetsProvider>
     </ToolsProvider>
   )

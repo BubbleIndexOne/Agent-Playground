@@ -23,10 +23,12 @@ export interface ToolsContextValue {
   tools: Tool[]
   /** Loading state for initial fetch or mutations */
   isLoading: boolean
+  /** Background revalidation state */
+  isRevalidating: boolean
   /** Error message if an operation fails */
   error: string | null
   /** Refreshes the tool list from the server */
-  refreshTools: () => Promise<void>
+  refreshTools: (silent?: boolean) => Promise<void>
   /** Saves a new tool or updates an existing one with atomic versioning */
   saveTool: (tool: Tool) => Promise<Tool>
   /** Deletes or archives a tool by its ID */
@@ -65,14 +67,18 @@ export function mapToolResponseToTool(tool: ToolResponse): Tool {
 export function ToolsProvider({ children }: { children: ReactNode }) {
   const [tools, setTools] = useState<Tool[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRevalidating, setIsRevalidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshTools = useCallback(async () => {
-    // Only set loading on cold start when there are no cached tools yet
-    setTools((current) => {
-      if (current.length === 0) setIsLoading(true)
-      return current
-    })
+  const refreshTools = useCallback(async (silent = false) => {
+    // Only set blocking loading on cold start when there are no cached tools yet
+    if (!silent) {
+      setTools((current) => {
+        if (current.length === 0) setIsLoading(true)
+        return current
+      })
+    }
+    setIsRevalidating(true)
     setError(null)
     try {
       const fetchedTools = await toolsApi.getTools({ include_public: true })
@@ -83,6 +89,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
       setError(err?.message || 'Failed to fetch tools')
     } finally {
       setIsLoading(false)
+      setIsRevalidating(false)
     }
   }, [])
 
@@ -284,6 +291,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const value: ToolsContextValue = {
     tools,
     isLoading,
+    isRevalidating,
     error,
     refreshTools,
     saveTool,

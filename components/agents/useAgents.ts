@@ -1,31 +1,18 @@
 /**
  * @fileoverview Agents – useAgents hook
  *
- * Encapsulates loading agent data from localStorage,
- * search/filter logic, and filter state management.
+ * Encapsulates search/filter logic and filter state management,
+ * consuming persistent agents from AgentsContext.
  */
 
-import { useState, useEffect } from 'react'
-import { AgentItem, AgentFilter, AGENTS_STORAGE_KEY } from './types'
+import { useState } from 'react'
+import { AgentFilter } from './types'
+import { useAgentsContext } from './AgentsContext'
 
 export function useAgents() {
-  const [agents, setAgents] = useState<AgentItem[]>([])
+  const { agents, isLoading, saveAgent, deleteAgent, refreshAgents } = useAgentsContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<AgentFilter>('all')
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(AGENTS_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed)) setAgents(parsed)
-        }
-      } catch (err) {
-        console.error('Failed to read workspace agents from localStorage:', err)
-      }
-    }
-  }, [])
 
   const filteredAgents = agents.filter(agent => {
     if (filter !== 'all' && agent.status !== filter) return false
@@ -42,6 +29,10 @@ export function useAgents() {
   return {
     agents,
     filteredAgents,
+    isLoading,
+    saveAgent,
+    deleteAgent,
+    refreshAgents,
     searchQuery,
     setSearchQuery,
     filter,

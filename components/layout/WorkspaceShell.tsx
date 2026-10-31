@@ -15,16 +15,16 @@ import { ChatProvider } from '@/components/chat/ChatContext'
 import { LoomIcon } from '@/components/ui/LoomIcon'
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isInitialLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !tokenStorage.hasAuthToken()) {
+    if (!isInitialLoading && !isAuthenticated && !tokenStorage.hasAuthToken()) {
       router.replace('/login')
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isInitialLoading, isAuthenticated, router])
 
-  if (isLoading || (!isAuthenticated && !tokenStorage.hasAuthToken())) {
+  if (isInitialLoading && !isAuthenticated) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-[#070709]">
         <LoomIcon className="size-8 text-indigo-400 animate-pulse" />
